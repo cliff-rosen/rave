@@ -105,7 +105,7 @@ if 'initialized' not in st.session_state:
     st.session_state.processing = False
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
-    st.session_state.message_container = None
+    st.session_state.message_containers = []
 
 # Custom logo and header
 st.markdown("""
@@ -133,10 +133,11 @@ with left_col:
         st.session_state.processing = False
         st.session_state.generating_answer = False
         st.session_state.should_rerun = True
+        st.session_state.message_containers = []
     
-    # Create a container for messages
-    if st.session_state.message_container is None:
-        st.session_state.message_container = st.empty()
+    # Display existing messages
+    for msg in st.session_state.status_messages:
+        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
 
 # Right column for input and output
 with right_col:
@@ -157,6 +158,7 @@ with right_col:
         
         # Clear previous status messages for new question
         st.session_state.status_messages = []
+        st.session_state.message_containers = []
         
         # Initialize state for the agent
         initial_state = {
@@ -176,10 +178,9 @@ with right_col:
                         new_message = output_data.get("msg", "")
                         st.session_state.status_messages.append(new_message)
                         
-                        # Update the message container in real-time
-                        with st.session_state.message_container:
-                            for msg in st.session_state.status_messages:
-                                st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+                        # Create a new container for this message
+                        with left_col:
+                            st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
                     
                     elif output_type == "values":
                         # Update values in the main area
@@ -209,5 +210,4 @@ if st.session_state.generating_answer:
 # Force rerun if needed
 if st.session_state.should_rerun:
     st.session_state.should_rerun = False
-    st.session_state.message_container = None
     st.experimental_rerun()
