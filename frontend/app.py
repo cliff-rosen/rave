@@ -105,7 +105,7 @@ if 'initialized' not in st.session_state:
     st.session_state.processing = False
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
-    st.session_state.message_containers = []
+    st.session_state.values_container = None
 
 # Custom logo and header
 st.markdown("""
@@ -133,7 +133,7 @@ with left_col:
         st.session_state.processing = False
         st.session_state.generating_answer = False
         st.session_state.should_rerun = True
-        st.session_state.message_containers = []
+        st.session_state.values_container = None
     
     # Display existing messages
     for msg in st.session_state.status_messages:
@@ -150,6 +150,10 @@ with right_col:
     # Store the current question in session state
     st.session_state.current_question = question
 
+    # Create a container for values if it doesn't exist
+    if st.session_state.values_container is None:
+        st.session_state.values_container = st.empty()
+
     # Process the question when it changes
     if question and question != st.session_state.last_question:
         st.session_state.last_question = question
@@ -158,7 +162,6 @@ with right_col:
         
         # Clear previous status messages for new question
         st.session_state.status_messages = []
-        st.session_state.message_containers = []
         
         # Initialize state for the agent
         initial_state = {
@@ -170,6 +173,7 @@ with right_col:
         # Process with the agent
         try:
             for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+                print(output)
                 if isinstance(output, tuple):
                     output_type, output_data = output
                     
@@ -185,7 +189,8 @@ with right_col:
                     elif output_type == "values":
                         # Update values in the main area
                         st.session_state.current_values = output_data
-                        st.json(st.session_state.current_values)
+                        with st.session_state.values_container:
+                            st.json(st.session_state.current_values)
             
             # When processing is complete
             st.session_state.generating_answer = False
@@ -198,7 +203,8 @@ with right_col:
     else:
         # Display current values if they exist
         if st.session_state.current_values:
-            st.json(st.session_state.current_values)
+            with st.session_state.values_container:
+                st.json(st.session_state.current_values)
 
 # Add a status footer for the "Generating answer..." message when needed
 if st.session_state.generating_answer:
