@@ -67,4 +67,11 @@ def create_response_generator_prompt():
         {previous_attempt}
         
         Generate a comprehensive response that addresses any gaps in the previous attempt while maintaining its strengths.""")
+    ])
+
+def create_direct_answer_prompt():
+    """Simple prompt that directly answers the question without any additional processing"""
+    return ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant that provides direct answers to questions."),
+        ("user", "{question}")
     ]) 

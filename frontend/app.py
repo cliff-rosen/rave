@@ -21,6 +21,20 @@ st.markdown("""
     .stTextInput > div > div > input {
         font-size: 1.2rem;
     }
+    .status-message {
+        color: #666;
+        font-style: italic;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    .status-area {
+        height: 300px;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -28,9 +42,9 @@ st.markdown("""
 if 'initialized' not in st.session_state:
     st.session_state.clear()
     st.session_state.initialized = True
-    st.session_state.history = []
-    st.session_state.current_query = ""
-    st.session_state.current_response = ""
+    st.session_state.current_question = ""
+    st.session_state.status_messages = []
+    st.session_state.current_values = {}
 
 # Header
 st.title("🤖 RAVE - Recursive Agent")
@@ -38,77 +52,65 @@ st.subheader("Your AI Assistant for Verified Explanations")
 
 # Sidebar
 with st.sidebar:
-    st.header("Settings")
+    st.header("Status")
     st.markdown("---")
     
-    # Reset button
+    # New Conversation button
     if st.button("New Conversation", type="primary"):
-        st.session_state.history = []
-        st.session_state.current_query = ""
-        st.session_state.current_response = ""
+        st.session_state.current_question = ""
+        st.session_state.status_messages = []
+        st.session_state.current_values = {}
         st.rerun()
+    
+    # Fixed height status area
+    st.markdown('<div class="status-area">', unsafe_allow_html=True)
+    for msg in st.session_state.status_messages:
+        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Main interface
-query = st.text_input(
+question = st.text_input(
     "What would you like to know?",
-    key="current_query",
+    key="current_question",
     placeholder="Enter your question here..."
 )
 
-if query and query != st.session_state.get("last_query", ""):
-    st.session_state.last_query = query
+if question and question != st.session_state.get("last_question", ""):
+    st.session_state.last_question = question
     
-    # Initialize progress tracking
-    progress_placeholder = st.empty()
-    response_placeholder = st.empty()
+    # Initialize display areas
+    st.markdown("### Output Values")
+    values_placeholder = st.empty()
     
     # Initialize state for the agent
     initial_state = {
         "messages": [],
-        "query": query,
-        "scorecard": None,
-        "search_history": {"queries": [], "results": []},
-        "attempt_history": {"responses": [], "scores": [], "feedback": []},
-        "current_gaps": [],
-        "current_attempt": None,
-        "new_queries": [],
-        "search_results": []
+        "question": question,
+        "answer": None
     }
     
     # Process with the agent
     try:
-        for output in graph.stream(initial_state):
-            # Update progress based on the current step
+        for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+            print(output)
+            
+            # Handle different types of output
             if isinstance(output, tuple):
                 output_type, output_data = output
-                if output_type == "updates":
-                    with progress_placeholder:
-                        st.write(f"Processing: {output_data}")
-                elif output_type == "final":
-                    final_response = output_data.get("current_attempt", "No response generated")
-                    with response_placeholder:
-                        st.markdown(final_response)
-                        
-                        # Show evaluation if available
-                        if output_data.get("scorecard"):
-                            with st.expander("Response Evaluation"):
-                                st.json(output_data["scorecard"])
-                        
-                        # Add to history
-                        st.session_state.history.append({
-                            "query": query,
-                            "response": final_response,
-                            "scorecard": output_data.get("scorecard")
-                        })
+                
+                if output_type == "custom":
+                    # Add new status message
+                    new_message = output_data.get("msg", "")
+                    if new_message:
+                        st.session_state.status_messages.append(new_message)
+                        # Rerun to update the status area
+                        st.rerun()
+                
+                elif output_type == "values":
+                    # Update values
+                    st.session_state.current_values = output_data
+                    with values_placeholder:
+                        st.json(st.session_state.current_values)
+    
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-
-# Show conversation history
-if st.session_state.history:
-    st.markdown("---")
-    st.subheader("Conversation History")
-    for idx, item in enumerate(reversed(st.session_state.history)):
-        with st.expander(f"Q: {item['query'][:50]}..."):
-            st.markdown(item["response"])
-            if item.get("scorecard"):
-                st.json(item["scorecard"]) 
+        st.error(f"An error occurred: {str(e)}") 
