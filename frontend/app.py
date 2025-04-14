@@ -168,6 +168,7 @@ with right_col:
             "messages": [],
             "question": question,
             "improved_question": None,
+            "scored_checklist": [],
             "answer": None
         }
         
