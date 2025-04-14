@@ -19,10 +19,20 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import StreamWriter, Send
 
+from ..config.settings import (
+    DEFAULT_MODEL,
+    MAX_ITERATIONS,
+    SCORE_THRESHOLD,
+    IMPROVEMENT_THRESHOLD,
+    MAX_SEARCH_RESULTS,
+    LOG_LEVEL,
+    LOG_FORMAT
+)
+
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=LOG_LEVEL,
+    format=LOG_FORMAT,
     handlers=[
         logging.FileHandler(f'rave_agent_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
         logging.StreamHandler()
@@ -59,7 +69,6 @@ class State(TypedDict):
     current_attempt: Optional[str]
     new_queries: List[str]
     search_results: List[str]
-
 
 # Define the graph
 graph_builder = StateGraph(State)
@@ -148,7 +157,7 @@ def evaluator(state: State) -> AsyncIterator[Dict[str, Any]]:
     if not validate_state(state):
         return {"error": "Invalid state"}
     
-    llm = ChatOpenAI(model="gpt-4")
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
     evaluator_prompt = create_evaluator_prompt()
     
     try:
@@ -186,7 +195,7 @@ def gap_analyzer(state: State) -> AsyncIterator[Dict[str, Any]]:
     # Get the most recent feedback if it exists
     feedback = state["attempt_history"].feedback[-1] if state["attempt_history"].feedback else "Initial attempt"
     
-    llm = ChatOpenAI(model="gpt-4")
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
     gap_analyzer_prompt = create_gap_analyzer_prompt()
     
     try:
@@ -209,7 +218,7 @@ def query_generator(state: State) -> AsyncIterator[Dict[str, Any]]:
     if not validate_state(state):
         return {"error": "Invalid state"}
     
-    llm = ChatOpenAI(model="gpt-4")
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
     query_generator_prompt = create_query_generator_prompt()
     
     try:
@@ -242,7 +251,7 @@ def search(state: State) -> AsyncIterator[Dict[str, Any]]:
     if not queries:
         queries = state["current_gaps"]
     
-    search_tool = TavilySearchResults(max_results=3)
+    search_tool = TavilySearchResults(max_results=MAX_SEARCH_RESULTS)
     search_results = []
     
     try:
@@ -272,7 +281,7 @@ def response_generator(state: State) -> AsyncIterator[Dict[str, Any]]:
     if not search_results:
         search_results = state["current_gaps"]
     
-    llm = ChatOpenAI(model="gpt-4")
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
     response_generator_prompt = create_response_generator_prompt()
     
     try:
@@ -299,7 +308,7 @@ def should_continue(state: State) -> bool:
 
     logger.info("Checking continuation criteria")
     
-    if len(state["attempt_history"].scores) >= 3:  # Max iterations
+    if len(state["attempt_history"].scores) >= MAX_ITERATIONS:  # Max iterations
         logger.info("Stopping: Maximum iterations reached")
         return False
     
@@ -310,19 +319,19 @@ def should_continue(state: State) -> bool:
         logger.info(f"Last score: {last_score}")
         logger.info(f"Previous score: {prev_score}")
         
-        if (last_score.completeness >= 0.9 and 
-            last_score.accuracy >= 0.9 and 
-            last_score.relevance >= 0.9 and 
-            last_score.clarity >= 0.9):
-            logger.info("Stopping: All scores above threshold (0.9)")
+        if (last_score.completeness >= SCORE_THRESHOLD and 
+            last_score.accuracy >= SCORE_THRESHOLD and 
+            last_score.relevance >= SCORE_THRESHOLD and 
+            last_score.clarity >= SCORE_THRESHOLD):
+            logger.info("Stopping: All scores above threshold")
             return False
             
         # Check for stagnation
-        if (abs(last_score.completeness - prev_score.completeness) < 0.05 and
-            abs(last_score.accuracy - prev_score.accuracy) < 0.05 and
-            abs(last_score.relevance - prev_score.relevance) < 0.05 and
-            abs(last_score.clarity - prev_score.clarity) < 0.05):
-            logger.info("Stopping: Stagnation detected (less than 0.05 improvement)")
+        if (abs(last_score.completeness - prev_score.completeness) < IMPROVEMENT_THRESHOLD and
+            abs(last_score.accuracy - prev_score.accuracy) < IMPROVEMENT_THRESHOLD and
+            abs(last_score.relevance - prev_score.relevance) < IMPROVEMENT_THRESHOLD and
+            abs(last_score.clarity - prev_score.clarity) < IMPROVEMENT_THRESHOLD):
+            logger.info("Stopping: Stagnation detected")
             return False
     
     logger.info("Continuing refinement process")
@@ -345,22 +354,17 @@ def trace_transition(current_node: str, next_node: str, state: State) -> None:
             logger.info(f"- New Queries: {state['new_queries']}")
         logger.info(f"{'='*50}\n")
 
-
-# Add edges with validation and tracing
-# graph_builder.add_conditional_edges(
-#     START,
-#     lambda state: (trace_transition("START", "evaluator", state) or True) and validate_state(state),
-#     {
-#         True: "evaluator",
-#         False: END
-#     }
-# )
-
+# Add nodes
 graph_builder.add_node("evaluator", evaluator)
 graph_builder.add_node("gap_analyzer", gap_analyzer)
 graph_builder.add_node("query_generator", query_generator)
 graph_builder.add_node("search", search)
 graph_builder.add_node("response_generator", response_generator)
+
+# Add edges with validation and tracing
+
+# add start node
+graph_builder.add_edge(START, "evaluator")
 
 graph_builder.add_conditional_edges(
     "evaluator",
@@ -407,6 +411,6 @@ graph_builder.add_conditional_edges(
     }
 )
 
-# Compile the graph without checkpointer for now
+# Compile the graph
 compiled = graph_builder.compile()
-graph = compiled  
+graph = compiled 

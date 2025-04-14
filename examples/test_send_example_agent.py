@@ -1,4 +1,4 @@
-from send_example_agent import (
+from examples.send_example_agent import (
     graph,
     State
 )
