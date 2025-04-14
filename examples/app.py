@@ -35,6 +35,7 @@ if user_input:
     
     # Run the graph with streaming
     for output in graph.stream(initial_state, stream_mode=["updates", "custom"]):
+        print(output)
         output_type, output_data = output
 
         if output_type == "custom":

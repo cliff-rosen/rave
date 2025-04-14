@@ -1,4 +1,4 @@
-from examples.send_example_agent import (
+from backend.agents.rave_agent import (
     graph,
     State
 )

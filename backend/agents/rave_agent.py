@@ -63,6 +63,7 @@ def validate_state(state: State) -> bool:
     return True
 
 def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    print("generating answer")
     if not validate_state(state):
         return {"error": "Invalid state"}
     
@@ -70,7 +71,7 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
     answer_prompt = create_direct_answer_prompt()
     
     try:
-        writer({"msg": "Generating answer..."})
+        writer({"msg": "Generating answer ..."})
         # Format the messages and log them
         formatted_prompt = answer_prompt.format(question=state["question"])
         
@@ -81,6 +82,7 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         return {"answer": answer.content}
         
     except Exception as e:
+        print(e)
         return {"error": str(e)}
 
 # Define the graph

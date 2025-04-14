@@ -112,29 +112,6 @@ if 'initialized' not in st.session_state:
     st.session_state.generating_answer = False
     st.session_state.items = []
 
-# Custom logo and header
-st.markdown("""
-    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-        <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
-        <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
-    </div>
-""", unsafe_allow_html=True)
-st.subheader("Your AI Assistant for Verified Explanations")
-
-# Sidebar
-with st.sidebar:
-    st.header("Status")
-    st.markdown("---")
-    
-    # New Conversation button
-    if st.button("New Conversation"):
-        st.session_state.current_question = ""
-        st.session_state.status_messages = []
-        st.session_state.current_values = {}
-        st.session_state.last_question = ""
-        st.session_state.processing = False
-        st.session_state.generating_answer = False
-        st.rerun()
     
     # Display status messages
     for msg in st.session_state.status_messages:
@@ -177,23 +154,8 @@ if question and question != st.session_state.last_question:
         # Process with the agent
         try:
             for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-                print(output)
-                # Handle different types of output
-                if isinstance(output, tuple):
-                    output_type, output_data = output
-                    
-                    if output_type == "custom":
-                        # Add new status message
-                        new_message = output_data.get("msg", "")
-                        st.session_state.status_messages.append(new_message)
-                        st.rerun()
-                    
-                    elif output_type == "values":
-                        # Update values in the main area
-                        st.session_state.current_values = output_data
-                        with values_placeholder:
-                            st.json(st.session_state.current_values)
-            
+                st.write(output)
+
             # When processing is complete
             st.session_state.generating_answer = False
             st.session_state.processing = False
