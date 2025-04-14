@@ -30,46 +30,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class State(TypedDict):
-    """State for the RAVE workflow"""
-    question: str
-    searches: Annotated[List[str], operator.add]
-
-
-def step_1(state: State, writer: StreamWriter) -> Iterator[Dict[str, Any]]:
-    return {"question": "improved question"}
-
-
-def step_2(state: State, writer: StreamWriter) -> Iterator[Dict[str, Any]]:
-    num = random.randint(1, 10)
-    i = state["question"]
-    for j in range(num):
-        time.sleep(.5)
-        writer({"msg": {"step": str(i), "count": str(j)}})
-    return {"searches": ["search " + str(i)]}
-
-
-def continue_to_step_2(state: State):
-    return [Send("step_2", {"question": x}) for x in range(10)]
-
-
-# Define the graph
-graph_builder = StateGraph(State)
-
-graph_builder.add_node("step_1", step_1)
-graph_builder.add_node("step_2", step_2)
-graph_builder.add_edge(START, "step_1")
-graph_builder.add_conditional_edges(
-    "step_1",
-    continue_to_step_2,
-    ["step_2"]
-)
-#graph_builder.add_edge("step_1", "step_2")
-graph_builder.add_edge("step_2", END)
-
-
-############# RAVE AGENT ##############
-
 class Scorecard(BaseModel):
     """Criteria for evaluating responses"""
     completeness: float
@@ -88,20 +48,21 @@ class AttemptHistory(BaseModel):
     scores: List[Scorecard]
     feedback: List[str]
 
+class State(TypedDict):
+    """State for the RAVE workflow"""
+    messages: Annotated[list, add_messages]
+    query: str
+    scorecard: Scorecard
+    search_history: SearchHistory
+    attempt_history: AttemptHistory
+    current_gaps: List[str]
+    current_attempt: Optional[str]
+    new_queries: List[str]
+    search_results: List[str]
 
 
-# class State(TypedDict):
-#     """State for the RAVE workflow"""
-#     messages: Annotated[list, add_messages]
-#     query: str
-#     scorecard: Scorecard
-#     search_history: SearchHistory
-#     attempt_history: AttemptHistory
-#     current_gaps: List[str]
-#     current_attempt: Optional[str]
-#     new_queries: List[str]
-#     search_results: List[str]
-
+# Define the graph
+graph_builder = StateGraph(State)
 
 def validate_state(state: State) -> bool:
     """Validate the state before processing"""
@@ -366,7 +327,6 @@ def should_continue(state: State) -> bool:
     
     logger.info("Continuing refinement process")
     return True
-
 
 def trace_transition(current_node: str, next_node: str, state: State) -> None:
     """Log the transition between nodes and relevant state information"""
