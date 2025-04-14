@@ -34,7 +34,8 @@ from .utils.prompts import (
     create_gap_analyzer_prompt,
     create_query_generator_prompt,
     create_response_generator_prompt,
-    create_direct_answer_prompt
+    create_direct_answer_prompt,
+    create_question_improvement_prompt
 )
 
 # Set up logging
@@ -53,6 +54,7 @@ class State(TypedDict):
     """State for the RAVE workflow"""
     messages: Annotated[list, add_messages]
     question: str
+    improved_question: str
     answer: str
 
 def validate_state(state: State) -> bool:
@@ -62,8 +64,28 @@ def validate_state(state: State) -> bool:
         return False
     return True
 
+def improve_question(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    """Improve the question for clarity and completeness"""
+    if not validate_state(state):
+        return {"error": "Invalid state"}
+    
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    improvement_prompt = create_question_improvement_prompt()
+    
+    try:
+        writer({"msg": "Improving question for clarity and completeness..."})
+        formatted_prompt = improvement_prompt.format(question=state["question"])
+        improved_question = llm.invoke(formatted_prompt)
+        writer({"msg": "Question improved successfully"})
+        
+        return {"improved_question": improved_question.content}
+        
+    except Exception as e:
+        logger.error(f"Error improving question: {str(e)}")
+        return {"error": str(e)}
+
 def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
-    print("generating answer")
+    """Generate an answer to the improved question"""
     if not validate_state(state):
         return {"error": "Invalid state"}
     
@@ -72,27 +94,29 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
     
     try:
         writer({"msg": "Generating answer ..."})
-        # Format the messages and log them
-        formatted_prompt = answer_prompt.format(question=state["question"])
+        # Use the improved question if available, otherwise use the original
+        question_to_use = state.get("improved_question", state["question"])
+        formatted_prompt = answer_prompt.format(question=question_to_use)
         
         answer = llm.invoke(formatted_prompt)
         writer({"msg": "Answer generated successfully"})
         
-        # Return only the updated portion of the state
         return {"answer": answer.content}
         
     except Exception as e:
-        print(e)
+        logger.error(f"Error generating answer: {str(e)}")
         return {"error": str(e)}
 
 # Define the graph
 graph_builder = StateGraph(State)
 
 # Add nodes
+graph_builder.add_node("improve_question", improve_question)
 graph_builder.add_node("generate_answer", generate_answer)
 
 # Add edges
-graph_builder.add_edge(START, "generate_answer")
+graph_builder.add_edge(START, "improve_question")
+graph_builder.add_edge("improve_question", "generate_answer")
 graph_builder.add_edge("generate_answer", END)
 
 # Compile the graph

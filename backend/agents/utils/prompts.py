@@ -74,4 +74,17 @@ def create_direct_answer_prompt():
     return ChatPromptTemplate.from_messages([
         ("system", "You are a helpful assistant that provides direct answers to questions."),
         ("user", "{question}")
+    ])
+
+def create_question_improvement_prompt():
+    """Prompt for improving questions to make them clearer and more complete"""
+    return ChatPromptTemplate.from_messages([
+        ("system", """You are an expert at improving questions to make them clearer, more specific, 
+        and more likely to lead to complete and accurate answers. Your task is to improve the given question 
+        while maintaining its original intent. Make sure the improved question:
+        1. Is clear and unambiguous
+        2. Contains all necessary context
+        3. Uses precise terminology
+        4. Is structured to elicit a complete answer"""),
+        ("user", "{question}")
     ]) 

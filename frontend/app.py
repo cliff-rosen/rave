@@ -167,6 +167,7 @@ with right_col:
         initial_state = {
             "messages": [],
             "question": question,
+            "improved_question": None,
             "answer": None
         }
         
