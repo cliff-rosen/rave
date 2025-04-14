@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="RAVE - Recursive Agent for Verified Explanations",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     menu_items=None
 )
 
@@ -21,7 +21,6 @@ st.markdown("""
     :root {
         --background-color: #1e1e2e;
         --text-color: #ffffff;
-        --sidebar-color: #2b2b3a;
         --status-bg-color: #2b2b3a;
     }
     
@@ -34,11 +33,6 @@ st.markdown("""
     header {
         background-color: var(--background-color);
         visibility: hidden;
-    }
-    
-    .sidebar .sidebar-content {
-        background-color: var(--sidebar-color);
-        color: var(--text-color);
     }
     
     /* Status area styling */
@@ -110,7 +104,8 @@ if 'initialized' not in st.session_state:
     st.session_state.last_question = ""
     st.session_state.processing = False
     st.session_state.generating_answer = False
-    st.session_state.items = []
+    st.session_state.should_rerun = False
+    st.session_state.message_container = None
 
 # Custom logo and header
 st.markdown("""
@@ -121,8 +116,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.subheader("Your AI Assistant for Verified Explanations")
 
-# Sidebar
-with st.sidebar:
+# Create two columns
+left_col, right_col = st.columns([1, 2])
+
+# Left column for status and controls
+with left_col:
     st.header("Status")
     st.markdown("---")
     
@@ -134,38 +132,31 @@ with st.sidebar:
         st.session_state.last_question = ""
         st.session_state.processing = False
         st.session_state.generating_answer = False
-        st.rerun()
+        st.session_state.should_rerun = True
     
-    # Display status messages
-    for msg in st.session_state.status_messages:
-        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+    # Create a container for messages
+    if st.session_state.message_container is None:
+        st.session_state.message_container = st.empty()
 
-# Main interface
-question = st.text_input(
-    "What would you like to know?",
-    value=st.session_state.current_question,
-    placeholder="Enter your question here..."
-)
+# Right column for input and output
+with right_col:
+    question = st.text_input(
+        "What would you like to know?",
+        value=st.session_state.current_question,
+        placeholder="Enter your question here..."
+    )
 
-# Store the current question in session state
-st.session_state.current_question = question
+    # Store the current question in session state
+    st.session_state.current_question = question
 
-# Main content area
-main_container = st.container()
-
-# Process the question when it changes
-if question and question != st.session_state.last_question:
-    st.session_state.last_question = question
-    st.session_state.processing = True
-    st.session_state.generating_answer = True
-    
-    # Clear previous status messages for new question
-    st.session_state.status_messages = []
-    
-    # Initialize display areas
-    with main_container:
-        st.markdown("### Output Values")
-        values_placeholder = st.empty()
+    # Process the question when it changes
+    if question and question != st.session_state.last_question:
+        st.session_state.last_question = question
+        st.session_state.processing = True
+        st.session_state.generating_answer = True
+        
+        # Clear previous status messages for new question
+        st.session_state.status_messages = []
         
         # Initialize state for the agent
         initial_state = {
@@ -177,8 +168,6 @@ if question and question != st.session_state.last_question:
         # Process with the agent
         try:
             for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-                print(output)
-                # Handle different types of output
                 if isinstance(output, tuple):
                     output_type, output_data = output
                     
@@ -186,13 +175,16 @@ if question and question != st.session_state.last_question:
                         # Add new status message
                         new_message = output_data.get("msg", "")
                         st.session_state.status_messages.append(new_message)
-                        st.rerun()
+                        
+                        # Update the message container in real-time
+                        with st.session_state.message_container:
+                            for msg in st.session_state.status_messages:
+                                st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
                     
                     elif output_type == "values":
                         # Update values in the main area
                         st.session_state.current_values = output_data
-                        with values_placeholder:
-                            st.json(st.session_state.current_values)
+                        st.json(st.session_state.current_values)
             
             # When processing is complete
             st.session_state.generating_answer = False
@@ -202,16 +194,20 @@ if question and question != st.session_state.last_question:
             st.error(f"An error occurred: {str(e)}")
             st.session_state.generating_answer = False
             st.session_state.processing = False
-else:
-    # Display current values if they exist
-    with main_container:
+    else:
+        # Display current values if they exist
         if st.session_state.current_values:
-            st.markdown("### Output Values")
             st.json(st.session_state.current_values)
-            
+
 # Add a status footer for the "Generating answer..." message when needed
 if st.session_state.generating_answer:
     st.markdown(
         '<div class="status-footer">Generating answer...</div>', 
         unsafe_allow_html=True
     )
+
+# Force rerun if needed
+if st.session_state.should_rerun:
+    st.session_state.should_rerun = False
+    st.session_state.message_container = None
+    st.experimental_rerun()

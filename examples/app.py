@@ -1,5 +1,5 @@
 import streamlit as st
-from src.agents.rave_agent import graph
+from backend.agents.rave_agent import graph
 
 # Clear all state if not done already
 if 'initialized' not in st.session_state:
@@ -24,18 +24,14 @@ if user_input:
     # Initialize state with the user's input
     initial_state = {"x": user_input, "y": []}
     
-    # Create containers for each step
-    step_containers = {}
+    # Create two columns
+    left_col, right_col = st.columns(2)
     
     # Initialize step messages
     step_messages = {}
     
-    # Create a placeholder for all output
-    output_area = st.empty()
-    
     # Run the graph with streaming
     for output in graph.stream(initial_state, stream_mode=["updates", "custom"]):
-        print(output)
         output_type, output_data = output
 
         if output_type == "custom":
@@ -45,12 +41,10 @@ if user_input:
                     step_messages[msg["step"]] = []
                 step_messages[msg["step"]].append(msg["count"])
                 
-                # Build the complete output text
-                output_text = ""
-                for step in sorted(step_messages.keys()):
-                    output_text += f"Step {step}:\n"
-                    output_text += ",".join(map(str, step_messages[step]))
-                    output_text += "\n\n"
+                # Display messages in left column
+                with left_col:
+                    st.write(f"Step {msg['step']}: {msg['count']}")
                 
-                # Update the display
-                output_area.text(output_text)
+                # Display values in right column
+                with right_col:
+                    st.write(f"Step {msg['step']} values: {msg['count']}")
