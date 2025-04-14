@@ -29,7 +29,6 @@ def chatbot(state: State) -> AsyncIterator[Dict[str, Any]]:
         print(f"Error in chatbot: {e}")  # Debug print
         raise
 
-
 def update(state: State) -> AsyncIterator[Dict[str, Any]]:
     message = state["messages"][-1]
     print("\n*****************")
