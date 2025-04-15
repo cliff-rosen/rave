@@ -56,13 +56,22 @@ def create_direct_answer_prompt():
     """Create a prompt for generating direct answers"""
     return ChatPromptTemplate.from_messages([
         ("system", """You are an expert at providing clear and comprehensive answers.
-        Answer the question directly and thoroughly.
-        If search results are provided, use them to enhance your answer with relevant information.
-        Make sure to cite sources when using information from search results."""),
+        Your task is to generate an answer that addresses all the requirements in the checklist.
+        Use the search results to enhance your answer with relevant information.
+        Make sure to cite sources when using information from search results.
+        
+        For each requirement in the checklist:
+        1. Ensure your answer directly addresses it
+        2. Provide specific details and examples where relevant
+        3. Use search results to support your points
+        4. If a requirement isn't fully addressed, acknowledge the gap
+        
+        Structure your answer to be clear, well-organized, and comprehensive."""),
         ("user", """Question: {question}
+        Checklist Requirements: {checklist}
         Search Results: {search_results}
         
-        Provide a comprehensive answer:""")
+        Generate a comprehensive answer that addresses all checklist requirements:""")
     ])
 
 def create_question_improvement_prompt():

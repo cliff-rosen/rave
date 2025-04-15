@@ -188,10 +188,14 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         # Use the improved question if available, otherwise use the original
         question_to_use = state.get("improved_question", state["question"])
         
-        # Format the prompt with search results if available
+        # Get checklist and search results
+        checklist = state.get("scored_checklist", [])
         search_results = state.get("search_results", [])
+        
+        # Format the prompt with all necessary information
         formatted_prompt = answer_prompt.format(
             question=question_to_use,
+            checklist=json.dumps([item["item_to_score"] for item in checklist]),
             search_results=json.dumps(search_results) if search_results else "No search results available"
         )
         
