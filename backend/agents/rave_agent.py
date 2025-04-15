@@ -352,6 +352,10 @@ def should_continue_searching(state: State) -> bool:
     # Check if any item has a score less than 1
     return any(item.get("current_score", 0) < 1.0 for item in checklist)
 
+TEST_MODE = True
+def is_test_mode(state: State) -> bool:
+    return TEST_MODE
+
 # Define the graph
 graph_builder = StateGraph(State)
 
@@ -366,7 +370,15 @@ graph_builder.add_node("score_answer", score_answer)
 
 # Add edges
 graph_builder.add_edge(START, "improve_question")
-graph_builder.add_edge("improve_question", "generate_scored_checklist")
+# graph_builder.add_edge("improve_question", "generate_scored_checklist")
+graph_builder.add_conditional_edges(
+    "improve_question",
+    is_test_mode,
+    {
+        False: "generate_scored_checklist",
+        True: END
+    }
+)
 graph_builder.add_edge("generate_scored_checklist", "generate_query")
 graph_builder.add_edge("generate_query", "search")
 graph_builder.add_edge("search", "update_knowledge_base")

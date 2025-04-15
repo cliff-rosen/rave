@@ -168,78 +168,79 @@ with right_col:
     # Store the current question in session state
     st.session_state.current_question = question
 
-    # Set processing state if we have a new question
-    if question and question != st.session_state.last_question and not st.session_state.cancelled:
-        st.session_state.last_question = question
-        st.session_state.processing = True
-        st.session_state.generating_answer = True
-        st.session_state.cancelled = False
-        st.session_state.status_messages = []
-        st.experimental_rerun()
-
     # Create a container for values if it doesn't exist
     if st.session_state.values_container is None:
         st.session_state.values_container = st.empty()
 
-    # Process the question if we're in processing state
-    if st.session_state.processing:
-        # Initialize state for the agent
-        initial_state = {
-            "messages": [],
-            "question": question,
-            "improved_question": None,
-            "scored_checklist": [],
-            "answer": None,
-            "knowledge_base": [],
-            "cancelled": False
-        }
+    # Set processing state if we have a new question
+if question and question != st.session_state.last_question and not st.session_state.cancelled:
+    st.session_state.last_question = question
+    st.session_state.processing = True
+    st.session_state.generating_answer = True
+    st.session_state.cancelled = False
+    st.session_state.status_messages = []
+    st.experimental_rerun()
+
+
+# Process the question if we're in processing state
+if st.session_state.processing:
+    # Initialize state for the agent
+    initial_state = {
+        "messages": [],
+        "question": question,
+        "improved_question": None,
+        "scored_checklist": [],
+        "answer": None,
+        "knowledge_base": [],
+        "cancelled": False
+    }
+    
+    # Process with the agent
+    try:
+        # Create a wrapper function to check for cancellation
+        def check_cancellation():
+            if st.session_state.cancelled:
+                return True
+            return False
         
-        # Process with the agent
-        try:
-            # Create a wrapper function to check for cancellation
-            def check_cancellation():
-                if st.session_state.cancelled:
-                    return True
-                return False
-            
-            # Process with the agent, checking for cancellation between steps
-            for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-                print(output)
-                if check_cancellation():
-                    break
-                if isinstance(output, tuple):
-                    output_type, output_data = output
+        # Process with the agent, checking for cancellation between steps
+        for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+            print(output)
+            if check_cancellation():
+                break
+            if isinstance(output, tuple):
+                output_type, output_data = output
+                
+                if output_type == "custom":
+                    # Add new status message
+                    new_message = output_data.get("msg", "")
+                    st.session_state.status_messages.append(new_message)
                     
-                    if output_type == "custom":
-                        # Add new status message
-                        new_message = output_data.get("msg", "")
-                        st.session_state.status_messages.append(new_message)
-                        
-                        # Create a new container for this message
-                        with left_col:
-                            st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
-                    
-                    elif output_type == "values":
-                        # Update values in the main area
-                        st.session_state.current_values = output_data
-                        with st.session_state.values_container:
-                            st.json(st.session_state.current_values)
-            
-            # When processing is complete
-            st.session_state.generating_answer = False
-            st.session_state.processing = False
-            st.experimental_rerun()
+                    # Create a new container for this message
+                    with left_col:
+                        st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
+                
+                elif output_type == "values":
+                    # Update values in the main area
+                    st.session_state.current_values = output_data
+                    with st.session_state.values_container:
+                        st.json(st.session_state.current_values)
         
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-            st.session_state.generating_answer = False
-            st.session_state.processing = False
-            st.experimental_rerun()
-    else:
-        # Display current values if they exist
-        if st.session_state.current_values:
-            with st.session_state.values_container:
-                st.json(st.session_state.current_values)
+        # When processing is complete
+        st.session_state.generating_answer = False
+        st.session_state.processing = False
+        st.experimental_rerun()
+    
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        st.session_state.generating_answer = False
+        st.session_state.processing = False
+        st.experimental_rerun()
+else:
+    # Display current values if they exist
+    if st.session_state.current_values:
+        with st.session_state.values_container:
+            st.json(st.session_state.current_values)
 
 # Add a status footer for the "Generating answer..." message when needed
 if st.session_state.generating_answer:
