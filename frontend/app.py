@@ -108,24 +108,21 @@ if 'initialized' not in st.session_state:
     st.session_state.values_container = None
     st.session_state.cancelled = False
     st.session_state.button_container = None
+    st.session_state.status_container = None
 
-st.write("PROCESSING STATUS: " + st.session_state.processing_status)
+# Create columns with new layout
+left_col, search_col, kb_col, answer_col, score_col = st.columns([2, 2, 2, 2, 2])
 
-# Custom logo and header
-st.markdown("""
-    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-        <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
-        <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
-    </div>
-""", unsafe_allow_html=True)
-st.subheader("Your AI Assistant for Verified Explanations")
-
-# Create two columns
-status_col, values_col, question_col, query_col, search_res_col, kb_col, answer_col, scored_checklist_col = st.columns([1, 2, 2, 2, 2, 2, 2, 2])
-
-# Left column for status and controls
-with status_col:
-    st.header("Status")
+# Left column - Header, title, question input, and process updates
+with left_col:
+    # Custom logo and header
+    st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
+            <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    st.subheader("Your AI Assistant for Verified Explanations")
     st.markdown("---")
     
     # New Conversation button
@@ -141,53 +138,66 @@ with status_col:
         st.session_state.cancelled = False
         st.experimental_rerun()
     
-    # Create button container if it doesn't exist
-    if st.session_state.button_container is None:
-        st.session_state.button_container = st.empty()
-    
-
-# Right column for input and output
-with values_col:
-    st.header("Values")
-    st.markdown("---")
-
+    # Question input
     question = st.text_input(
         "What would you like to know?",
         value=st.session_state.current_question,
         placeholder="Enter your question here..."
     )
-
+    
     # Store the current question in session state
     st.session_state.current_question = question
+    
+    # Improved question display
+    st.markdown("### Improved Question")
+    st.session_state.improved_question_container = st.empty()
+    
+    # Status messages area
+    st.markdown("### Process Updates")
+    if st.session_state.status_container is None:
+        st.session_state.status_container = st.empty()
+    
+    # # Display all current status messages
+    # with st.session_state.status_container:
+    #     for msg in st.session_state.status_messages:
+    #         st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
 
-    # Create a container for values if it doesn't exist
-    if st.session_state.values_container is None:
-        st.session_state.values_container = st.empty()
-
-with query_col:
-    st.write("Query")
+# Search column - Query and search results
+with search_col:
+    st.header("Search")
+    st.markdown("---")
+    
+    # Current query
+    st.markdown("### Current Query")
     st.session_state.query_container = st.empty()
-
-with search_res_col:
-    st.write("Search Results")  
+    
+    # Query history
+    st.markdown("### Query History")
+    st.session_state.query_history_container = st.empty()
+    
+    # Search results
+    st.markdown("### Search Results")
     st.session_state.search_res_container = st.empty()
 
-
+# Knowledge Base column
 with kb_col:
-    st.write("Knowledge Base")
+    st.header("Knowledge Base")
+    st.markdown("---")
     st.session_state.kb_container = st.empty()
 
-
+# Answer column
 with answer_col:
-    st.write("Answer")
+    st.header("Answer")
+    st.markdown("---")
     st.session_state.answer_container = st.empty()
 
-
-with scored_checklist_col:
-    st.write("Scored Checklist")
+# Scorecard column
+with score_col:
+    st.header("Scorecard")
+    st.markdown("---")
     st.session_state.scored_checklist_container = st.empty()
 
-    # Set processing state if we have a new question
+# Set processing state if we have a new question
 if question and st.session_state.processing_status == "WAITING FOR INPUT":
     st.session_state.last_question = question
     st.session_state.processing_status = "STARTING"
@@ -196,13 +206,6 @@ if question and st.session_state.processing_status == "WAITING FOR INPUT":
     st.session_state.status_messages = []
     st.rerun()
 
-test_stream = [
-    ("custom", {"msg": "Processing 1..."}),
-    ("custom", {"msg": "Processing 2..."}),
-    ("custom", {"msg": "Processing 3..."}),
-    ("custom", {"msg": "Processing 4..."}),
-    ("custom", {"msg": "Processing 5..."}),
-]
 
 # Process the question if we're in processing state
 if st.session_state.processing_status == "STARTING":
@@ -217,10 +220,9 @@ if st.session_state.processing_status == "STARTING":
         "knowledge_base": []
     }
     
-    # Process with the agent, checking for cancellation between steps
+    # Process with the agent
     for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
         print(output)
-
         if isinstance(output, tuple):
             output_type, output_data = output
             
@@ -230,39 +232,42 @@ if st.session_state.processing_status == "STARTING":
                 st.session_state.status_messages.append(new_message)
                 
                 # Display all status messages
-                with status_col:
-                    st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
+                with st.session_state.status_container:
+                    for msg in st.session_state.status_messages:
+                        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
             
             elif output_type == "values":
                 # Update values in the main area
                 st.session_state.current_values = output_data
                 
                 # Update all containers with their respective values
-                with st.session_state.values_container:
-                    st.json(st.session_state.current_values)
-
+                with st.session_state.improved_question_container:
+                    if "improved_question" in output_data:
+                        st.json({"improved_question": output_data["improved_question"]})
+                
                 with st.session_state.query_container:
                     if "current_query" in output_data:
                         st.json({"current_query": output_data["current_query"]})
+                
+                with st.session_state.query_history_container:
                     if "query_history" in output_data:
                         st.json({"query_history": output_data["query_history"]})
-
+                
                 with st.session_state.search_res_container:
                     if "search_results" in output_data:
                         st.json({"search_results": output_data["search_results"]})
-
+                
                 with st.session_state.kb_container:
                     if "knowledge_base" in output_data:
                         st.json({"knowledge_base": output_data["knowledge_base"]})
-
+                
                 with st.session_state.answer_container:
                     if "answer" in output_data:
                         st.json({"answer": output_data["answer"]})
-
+                
                 with st.session_state.scored_checklist_container:
                     if "scored_checklist" in output_data:
                         st.json({"scored_checklist": output_data["scored_checklist"]})
-                
 
     # When processing is complete
     st.session_state.generating_answer = False
