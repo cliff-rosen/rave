@@ -14,7 +14,10 @@ def main():
     initial_state: State = {
         "messages": [],
         "question": "What is the capital of France?",
-        "answer": ""
+        "answer": "",
+        "improved_question": None,
+        "scored_checklist": [],
+        "knowledge_base": []
     }
     
     print("Starting agent...")

@@ -1,7 +1,7 @@
 import streamlit as st
 from backend.agents.rave_agent import graph
 from dotenv import load_dotenv
-
+import time
 # Load environment variables
 load_dotenv()
 
@@ -217,60 +217,58 @@ if st.session_state.processing_status == "STARTING":
         "knowledge_base": []
     }
     
-    # Process with the agent
-    try:
-        # Display initial processing message
-        with status_col:
-            st.markdown('<div class="status-message">Processing...</div>', unsafe_allow_html=True)
+    # Process with the agent, checking for cancellation between steps
+    for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+        print(output)
+
+        if isinstance(output, tuple):
+            output_type, output_data = output
             
-        # Process with the agent, checking for cancellation between steps
-        for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-        # for output in test_stream:
-            print(output)
-            if isinstance(output, tuple):
-                output_type, output_data = output
+            if output_type == "custom":
+                # Add new status message
+                new_message = output_data.get("msg", "")
+                st.session_state.status_messages.append(new_message)
                 
-                if output_type == "custom":
-                    # Add new status message
-                    new_message = output_data.get("msg", "")
-                    st.session_state.status_messages.append(new_message)
-                    
-                    # Display all status messages
-                    with status_col:
-                        st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
+                # Display all status messages
+                with status_col:
+                    st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
+            
+            elif output_type == "values":
+                # Update values in the main area
+                st.session_state.current_values = output_data
                 
-                elif output_type == "values":
-                    # Update values in the main area
-                    st.session_state.current_values = output_data
-                    with st.session_state.values_container:
-                        st.json(st.session_state.current_values)
+                # Update all containers with their respective values
+                with st.session_state.values_container:
+                    st.json(st.session_state.current_values)
 
-                    with st.session_state.query_container:
-                        st.json(st.session_state.current_values.query)
+                with st.session_state.query_container:
+                    if "current_query" in output_data:
+                        st.json({"current_query": output_data["current_query"]})
+                    if "query_history" in output_data:
+                        st.json({"query_history": output_data["query_history"]})
 
-                    with st.session_state.search_res_container:
-                        st.json(st.session_state.current_values.search_results)
-        
-                    with st.session_state.kb_container:
-                        st.json(st.session_state.current_values.knowledge_base)
+                with st.session_state.search_res_container:
+                    if "search_results" in output_data:
+                        st.json({"search_results": output_data["search_results"]})
 
-                    with st.session_state.answer_container:
-                        st.json(st.session_state.current_values.answer)
+                with st.session_state.kb_container:
+                    if "knowledge_base" in output_data:
+                        st.json({"knowledge_base": output_data["knowledge_base"]})
 
-                    with st.session_state.scored_checklist_container:
-                        st.json(st.session_state.current_values.scored_checklist)
-                        
+                with st.session_state.answer_container:
+                    if "answer" in output_data:
+                        st.json({"answer": output_data["answer"]})
 
-        # When processing is complete
-        st.session_state.generating_answer = False
-        st.session_state.processing = False
-        # st.rerun()
-    
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.session_state.generating_answer = False
-        st.session_state.processing = False
-        st.rerun()
+                with st.session_state.scored_checklist_container:
+                    if "scored_checklist" in output_data:
+                        st.json({"scored_checklist": output_data["scored_checklist"]})
+                
+
+    # When processing is complete
+    st.session_state.generating_answer = False
+    st.session_state.processing_status = "COMPLETED"
+    # st.rerun()
+
 else:
     # Display current values if they exist
     if st.session_state.current_values:

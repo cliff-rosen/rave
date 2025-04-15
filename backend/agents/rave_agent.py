@@ -356,10 +356,19 @@ def should_continue_searching(state: State) -> bool:
 TEST_MODE = False
 def is_test_mode(state: State) -> bool:
     print("TEST_MODE: " + str(TEST_MODE))
-    return TEST_MODE
+    return {"improve_question": "new question"}
 
 # Define the graph
 graph_builder = StateGraph(State)
+
+# def test_node(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+#     print("TEST_MODE: " + str(TEST_MODE))
+#     writer({"msg": "TEST_MODE: " + str(TEST_MODE)})
+#     return {"improved_question": "new question"}
+
+# graph_builder.add_node("test_node", test_node)
+# graph_builder.add_edge(START, "test_node")
+# 
 
 # Add nodes
 graph_builder.add_node("improve_question", improve_question)
