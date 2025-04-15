@@ -130,7 +130,8 @@ def generate_query(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str
         )
         
         query_response = llm.invoke(formatted_prompt)
-        new_query = query_response.content.strip()
+        # Strip any quotes from the query
+        new_query = query_response.content.strip().strip('"\'')
         
         # Update query history
         query_history = state.get("query_history", [])
@@ -155,6 +156,13 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     try:
         writer({"msg": "Performing search..."})
         
+        # Debug: Check API key
+        if not TAVILY_API_KEY:
+            writer({"msg": "Error: TAVILY_API_KEY not set"})
+            return {}
+        else:
+            writer({"msg": "using TAVILY_API_KEY: " + TAVILY_API_KEY})   
+        
         # Initialize Tavily search
         search = TavilySearchResults(api_key=TAVILY_API_KEY, max_results=MAX_SEARCH_RESULTS)
         
@@ -163,9 +171,22 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         if not current_query:
             writer({"msg": "Error: No search query available"})
             return {}
+        else:
+            writer({"msg": "using current_query: " + current_query})
+        
         
         # Perform the search
         search_results = search.invoke(current_query)
+        # test_query = "Latest news and updates in technology along with their sources and significance"
+        # search_results = search.invoke(test_query)
+        
+        # Debug: Print raw search results
+        print("Raw search results:", search_results)
+        print("Type of search results:", type(search_results))
+        
+        if not search_results:
+            writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
+            return {"search_results": []}
         
         writer({"msg": "Search completed successfully"})
         return {"search_results": search_results}
