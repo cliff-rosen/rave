@@ -26,7 +26,8 @@ from ..config.settings import (
     IMPROVEMENT_THRESHOLD,
     MAX_SEARCH_RESULTS,
     LOG_LEVEL,
-    LOG_FORMAT
+    LOG_FORMAT,
+    TAVILY_API_KEY
 )
 
 from .utils.prompts import (
@@ -49,6 +50,8 @@ class State(TypedDict):
     improved_question: str
     scored_checklist: List[Dict[str, Any]]
     answer: str
+    query_history: List[str]
+    search_results: List[Dict[str, Any]]
 
 def validate_state(state: State) -> bool:
     """Validate the state before processing"""
@@ -108,6 +111,68 @@ def generate_scored_checklist(state: State, writer: StreamWriter) -> AsyncIterat
         writer({"msg": f"Error generating checklist: {str(e)}"})
         return {}
 
+def generate_query(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    """Generate a search query based on the question and checklist"""
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    query_generator_prompt = create_query_generator_prompt()
+    
+    try:
+        writer({"msg": "Generating search query..."})
+        formatted_prompt = query_generator_prompt.format(
+            question=state["improved_question"],
+            checklist=json.dumps(state["scored_checklist"]),
+            query_history=json.dumps(state.get("query_history", []))
+        )
+        
+        query_response = llm.invoke(formatted_prompt)
+        new_query = query_response.content.strip()
+        
+        # Update query history
+        query_history = state.get("query_history", [])
+        query_history.append(new_query)
+        
+        writer({"msg": "Search query generated successfully"})
+        return {
+            "query_history": query_history,
+            "current_query": new_query
+        }
+        
+    except Exception as e:
+        writer({"msg": f"Error generating search query: {str(e)}"})
+        return {}
+
+def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    """Perform a search using the generated query"""
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    try:
+        writer({"msg": "Performing search..."})
+        
+        # Initialize Tavily search
+        search = TavilySearchResults(api_key=TAVILY_API_KEY, max_results=MAX_SEARCH_RESULTS)
+        
+        # Get the current query from state
+        current_query = state.get("current_query")
+        if not current_query:
+            writer({"msg": "Error: No search query available"})
+            return {}
+        
+        # Perform the search
+        search_results = search.invoke(current_query)
+        
+        writer({"msg": "Search completed successfully"})
+        return {"search_results": search_results}
+        
+    except Exception as e:
+        writer({"msg": f"Error performing search: {str(e)}"})
+        return {}
+
 def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     """Generate an answer to the improved question"""
     if not validate_state(state):
@@ -121,7 +186,16 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         writer({"msg": "Generating answer ..."})
         # Use the improved question if available, otherwise use the original
         question_to_use = state.get("improved_question", state["question"])
-        formatted_prompt = answer_prompt.format(question=question_to_use)
+        
+        # Format the prompt with search results if available
+        search_results = state.get("search_results", [])
+        if search_results:
+            formatted_prompt = answer_prompt.format(
+                question=question_to_use,
+                search_results=json.dumps(search_results)
+            )
+        else:
+            formatted_prompt = answer_prompt.format(question=question_to_use)
         
         answer = llm.invoke(formatted_prompt)
         writer({"msg": "Answer generated successfully"})
@@ -171,13 +245,17 @@ graph_builder = StateGraph(State)
 # Add nodes
 graph_builder.add_node("improve_question", improve_question)
 graph_builder.add_node("generate_scored_checklist", generate_scored_checklist)
+graph_builder.add_node("generate_query", generate_query)
+graph_builder.add_node("search", search)
 graph_builder.add_node("generate_answer", generate_answer)
 graph_builder.add_node("score_answer", score_answer)
 
 # Add edges
 graph_builder.add_edge(START, "improve_question")
 graph_builder.add_edge("improve_question", "generate_scored_checklist")
-graph_builder.add_edge("generate_scored_checklist", "generate_answer")
+graph_builder.add_edge("generate_scored_checklist", "generate_query")
+graph_builder.add_edge("generate_query", "search")
+graph_builder.add_edge("search", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
 graph_builder.add_edge("score_answer", END)
 

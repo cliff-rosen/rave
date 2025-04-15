@@ -30,8 +30,16 @@ def create_query_generator_prompt():
     """Create a prompt for generating search queries"""
     return ChatPromptTemplate.from_messages([
         ("system", """You are an expert at generating effective search queries.
-        Create a search query that will help find information to fill the identified gaps."""),
-        ("user", "{gaps}")
+        Based on the question and checklist requirements, generate a search query that will help find relevant information.
+        Consider the query history to avoid repeating similar searches.
+        The query should be specific and focused on finding information that will help address the checklist requirements.
+        
+        Return only the search query text, nothing else."""),
+        ("user", """Question: {question}
+        Checklist Requirements: {checklist}
+        Previous Queries: {query_history}
+        
+        Generate a new search query:""")
     ])
 
 def create_response_generator_prompt():
@@ -48,8 +56,13 @@ def create_direct_answer_prompt():
     """Create a prompt for generating direct answers"""
     return ChatPromptTemplate.from_messages([
         ("system", """You are an expert at providing clear and comprehensive answers.
-        Answer the question directly and thoroughly."""),
-        ("user", "{question}")
+        Answer the question directly and thoroughly.
+        If search results are provided, use them to enhance your answer with relevant information.
+        Make sure to cite sources when using information from search results."""),
+        ("user", """Question: {question}
+        {search_results if search_results else ''}
+        
+        Provide a comprehensive answer:""")
     ])
 
 def create_question_improvement_prompt():
