@@ -106,6 +106,8 @@ if 'initialized' not in st.session_state:
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
     st.session_state.values_container = None
+    st.session_state.cancelled = False
+    st.session_state.button_container = None
 
 # Custom logo and header
 st.markdown("""
@@ -134,6 +136,22 @@ with left_col:
         st.session_state.generating_answer = False
         st.session_state.should_rerun = True
         st.session_state.values_container = None
+        st.session_state.cancelled = False
+        st.experimental_rerun()
+    
+    # Create button container if it doesn't exist
+    if st.session_state.button_container is None:
+        st.session_state.button_container = st.empty()
+    
+    # Update button container based on processing state
+    with st.session_state.button_container:
+        if st.session_state.processing or st.session_state.generating_answer:
+            if st.button("Cancel"):
+                st.session_state.cancelled = True
+                st.session_state.processing = False
+                st.session_state.generating_answer = False
+                st.session_state.status_messages.append("Operation cancelled by user")
+                st.experimental_rerun()
     
     # Display existing messages
     for msg in st.session_state.status_messages:
@@ -150,19 +168,21 @@ with right_col:
     # Store the current question in session state
     st.session_state.current_question = question
 
+    # Set processing state if we have a new question
+    if question and question != st.session_state.last_question and not st.session_state.cancelled:
+        st.session_state.last_question = question
+        st.session_state.processing = True
+        st.session_state.generating_answer = True
+        st.session_state.cancelled = False
+        st.session_state.status_messages = []
+        st.experimental_rerun()
+
     # Create a container for values if it doesn't exist
     if st.session_state.values_container is None:
         st.session_state.values_container = st.empty()
 
-    # Process the question when it changes
-    if question and question != st.session_state.last_question:
-        st.session_state.last_question = question
-        st.session_state.processing = True
-        st.session_state.generating_answer = True
-        
-        # Clear previous status messages for new question
-        st.session_state.status_messages = []
-        
+    # Process the question if we're in processing state
+    if st.session_state.processing:
         # Initialize state for the agent
         initial_state = {
             "messages": [],
@@ -170,13 +190,23 @@ with right_col:
             "improved_question": None,
             "scored_checklist": [],
             "answer": None,
-            "knowledge_base": []
+            "knowledge_base": [],
+            "cancelled": False
         }
         
         # Process with the agent
         try:
+            # Create a wrapper function to check for cancellation
+            def check_cancellation():
+                if st.session_state.cancelled:
+                    return True
+                return False
+            
+            # Process with the agent, checking for cancellation between steps
             for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
                 print(output)
+                if check_cancellation():
+                    break
                 if isinstance(output, tuple):
                     output_type, output_data = output
                     
@@ -198,11 +228,13 @@ with right_col:
             # When processing is complete
             st.session_state.generating_answer = False
             st.session_state.processing = False
+            st.experimental_rerun()
         
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
             st.session_state.generating_answer = False
             st.session_state.processing = False
+            st.experimental_rerun()
     else:
         # Display current values if they exist
         if st.session_state.current_values:

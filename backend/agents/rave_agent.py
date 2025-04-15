@@ -57,6 +57,7 @@ class State(TypedDict):
     search_results: List[Dict[str, Any]]
     current_query: str
     knowledge_base: List[KnowledgeNugget]
+    cancelled: bool
 
 def validate_state(state: State) -> bool:
     """Validate the state before processing"""
@@ -339,6 +340,10 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
 
 def should_continue_searching(state: State) -> bool:
     """Check if we should continue searching based on checklist scores"""
+    # Check if cancelled
+    if state.get("cancelled", False):
+        return False
+        
     checklist = state.get("scored_checklist", [])
     if not checklist:
         return False
