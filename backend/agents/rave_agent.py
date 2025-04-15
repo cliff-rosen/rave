@@ -337,6 +337,15 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
         writer({"msg": f"Error updating knowledge base: {str(e)}"})
         return {"knowledge_base": current_kb}
 
+def should_continue_searching(state: State) -> bool:
+    """Check if we should continue searching based on checklist scores"""
+    checklist = state.get("scored_checklist", [])
+    if not checklist:
+        return False
+    
+    # Check if any item has a score less than 1
+    return any(item.get("current_score", 0) < 1.0 for item in checklist)
+
 # Define the graph
 graph_builder = StateGraph(State)
 
@@ -357,7 +366,16 @@ graph_builder.add_edge("generate_query", "search")
 graph_builder.add_edge("search", "update_knowledge_base")
 graph_builder.add_edge("update_knowledge_base", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
-graph_builder.add_edge("score_answer", END)
+
+# Add conditional edge after scoring
+graph_builder.add_conditional_edges(
+    "score_answer",
+    should_continue_searching,
+    {
+        True: "generate_query",  # If scores < 1, go back to generate_query
+        False: END  # If all scores are 1, we're done
+    }
+)
 
 # Compile the graph
 compiled = graph_builder.compile()
