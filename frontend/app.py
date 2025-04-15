@@ -231,10 +231,13 @@ if st.session_state.processing_status == "STARTING":
                 new_message = output_data.get("msg", "")
                 st.session_state.status_messages.append(new_message)
                 
+                messages = ""
+                for msg in st.session_state.status_messages:
+                    messages += f'<div class="status-message">{msg}</div>'
+
                 # Display all status messages
                 with st.session_state.status_container:
-                    for msg in st.session_state.status_messages:
-                        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+                    st.markdown(messages, unsafe_allow_html=True)
             
             elif output_type == "values":
                 # Update values in the main area
