@@ -52,6 +52,7 @@ class State(TypedDict):
     answer: str
     query_history: List[str]
     search_results: List[Dict[str, Any]]
+    current_query: str
 
 def validate_state(state: State) -> bool:
     """Validate the state before processing"""
@@ -189,13 +190,10 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         
         # Format the prompt with search results if available
         search_results = state.get("search_results", [])
-        if search_results:
-            formatted_prompt = answer_prompt.format(
-                question=question_to_use,
-                search_results=json.dumps(search_results)
-            )
-        else:
-            formatted_prompt = answer_prompt.format(question=question_to_use)
+        formatted_prompt = answer_prompt.format(
+            question=question_to_use,
+            search_results=json.dumps(search_results) if search_results else "No search results available"
+        )
         
         answer = llm.invoke(formatted_prompt)
         writer({"msg": "Answer generated successfully"})

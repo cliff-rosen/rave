@@ -60,7 +60,7 @@ def create_direct_answer_prompt():
         If search results are provided, use them to enhance your answer with relevant information.
         Make sure to cite sources when using information from search results."""),
         ("user", """Question: {question}
-        {search_results if search_results else ''}
+        Search Results: {search_results}
         
         Provide a comprehensive answer:""")
     ])
