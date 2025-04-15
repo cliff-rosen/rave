@@ -145,17 +145,16 @@ with left_col:
     
     # Update button container based on processing state
     with st.session_state.button_container:
-        if st.session_state.processing or st.session_state.generating_answer:
-            if st.button("Cancel"):
-                st.session_state.cancelled = True
-                st.session_state.processing = False
-                st.session_state.generating_answer = False
-                st.session_state.status_messages.append("Operation cancelled by user")
-                st.experimental_rerun()
+        if st.button("Cancel"):
+            st.session_state.cancelled = True
+            st.session_state.processing = False
+            st.session_state.generating_answer = False
+            st.session_state.status_messages.append("Operation cancelled by user")
+            st.experimental_rerun()
     
-    # Display existing messages
-    for msg in st.session_state.status_messages:
-        st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+    # # Display existing messages
+    # for msg in st.session_state.status_messages:
+    #     st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
 
 # Right column for input and output
 with right_col:
@@ -168,9 +167,12 @@ with right_col:
     # Store the current question in session state
     st.session_state.current_question = question
 
+    st.write("Here")
+    
     # Create a container for values if it doesn't exist
     if st.session_state.values_container is None:
         st.session_state.values_container = st.empty()
+
 
     # Set processing state if we have a new question
 if question and question != st.session_state.last_question and not st.session_state.cancelled:
