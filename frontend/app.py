@@ -102,12 +102,14 @@ if 'initialized' not in st.session_state:
     st.session_state.status_messages = []
     st.session_state.current_values = {}
     st.session_state.last_question = ""
-    st.session_state.processing = False
+    st.session_state.processing_status = "WAITING FOR INPUT"
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
     st.session_state.values_container = None
     st.session_state.cancelled = False
     st.session_state.button_container = None
+
+st.write("PROCESSING STATUS: " + st.session_state.processing_status)
 
 # Custom logo and header
 st.markdown("""
@@ -119,10 +121,10 @@ st.markdown("""
 st.subheader("Your AI Assistant for Verified Explanations")
 
 # Create two columns
-left_col, right_col = st.columns([1, 2])
+status_col, values_col, question_col, query_col, search_res_col, kb_col, answer_col, scored_checklist_col = st.columns([1, 2, 2, 2, 2, 2, 2, 2])
 
 # Left column for status and controls
-with left_col:
+with status_col:
     st.header("Status")
     st.markdown("---")
     
@@ -132,7 +134,7 @@ with left_col:
         st.session_state.status_messages = []
         st.session_state.current_values = {}
         st.session_state.last_question = ""
-        st.session_state.processing = False
+        st.session_state.processing_status = "WAITING FOR INPUT"
         st.session_state.generating_answer = False
         st.session_state.should_rerun = True
         st.session_state.values_container = None
@@ -143,21 +145,12 @@ with left_col:
     if st.session_state.button_container is None:
         st.session_state.button_container = st.empty()
     
-    # Update button container based on processing state
-    with st.session_state.button_container:
-        if st.button("Cancel"):
-            st.session_state.cancelled = True
-            st.session_state.processing = False
-            st.session_state.generating_answer = False
-            st.session_state.status_messages.append("Operation cancelled by user")
-            st.experimental_rerun()
-    
-    # # Display existing messages
-    # for msg in st.session_state.status_messages:
-    #     st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
 
 # Right column for input and output
-with right_col:
+with values_col:
+    st.header("Values")
+    st.markdown("---")
+
     question = st.text_input(
         "What would you like to know?",
         value=st.session_state.current_question,
@@ -167,25 +160,53 @@ with right_col:
     # Store the current question in session state
     st.session_state.current_question = question
 
-    st.write("Here")
-    
     # Create a container for values if it doesn't exist
     if st.session_state.values_container is None:
         st.session_state.values_container = st.empty()
 
+with query_col:
+    st.write("Query")
+    st.session_state.query_container = st.empty()
+
+with search_res_col:
+    st.write("Search Results")  
+    st.session_state.search_res_container = st.empty()
+
+
+with kb_col:
+    st.write("Knowledge Base")
+    st.session_state.kb_container = st.empty()
+
+
+with answer_col:
+    st.write("Answer")
+    st.session_state.answer_container = st.empty()
+
+
+with scored_checklist_col:
+    st.write("Scored Checklist")
+    st.session_state.scored_checklist_container = st.empty()
 
     # Set processing state if we have a new question
-if question and question != st.session_state.last_question and not st.session_state.cancelled:
+if question and st.session_state.processing_status == "WAITING FOR INPUT":
     st.session_state.last_question = question
-    st.session_state.processing = True
+    st.session_state.processing_status = "STARTING"
     st.session_state.generating_answer = True
     st.session_state.cancelled = False
     st.session_state.status_messages = []
-    st.experimental_rerun()
+    st.rerun()
 
+test_stream = [
+    ("custom", {"msg": "Processing 1..."}),
+    ("custom", {"msg": "Processing 2..."}),
+    ("custom", {"msg": "Processing 3..."}),
+    ("custom", {"msg": "Processing 4..."}),
+    ("custom", {"msg": "Processing 5..."}),
+]
 
 # Process the question if we're in processing state
-if st.session_state.processing:
+if st.session_state.processing_status == "STARTING":
+    st.session_state.processing_status = "PROCESSING"
     # Initialize state for the agent
     initial_state = {
         "messages": [],
@@ -193,23 +214,19 @@ if st.session_state.processing:
         "improved_question": None,
         "scored_checklist": [],
         "answer": None,
-        "knowledge_base": [],
-        "cancelled": False
+        "knowledge_base": []
     }
     
     # Process with the agent
     try:
-        # Create a wrapper function to check for cancellation
-        def check_cancellation():
-            if st.session_state.cancelled:
-                return True
-            return False
-        
+        # Display initial processing message
+        with status_col:
+            st.markdown('<div class="status-message">Processing...</div>', unsafe_allow_html=True)
+            
         # Process with the agent, checking for cancellation between steps
         for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+        # for output in test_stream:
             print(output)
-            if check_cancellation():
-                break
             if isinstance(output, tuple):
                 output_type, output_data = output
                 
@@ -218,8 +235,8 @@ if st.session_state.processing:
                     new_message = output_data.get("msg", "")
                     st.session_state.status_messages.append(new_message)
                     
-                    # Create a new container for this message
-                    with left_col:
+                    # Display all status messages
+                    with status_col:
                         st.markdown(f'<div class="status-message">{new_message}</div>', unsafe_allow_html=True)
                 
                 elif output_type == "values":
@@ -227,17 +244,33 @@ if st.session_state.processing:
                     st.session_state.current_values = output_data
                     with st.session_state.values_container:
                         st.json(st.session_state.current_values)
+
+                    with st.session_state.query_container:
+                        st.json(st.session_state.current_values.query)
+
+                    with st.session_state.search_res_container:
+                        st.json(st.session_state.current_values.search_results)
         
+                    with st.session_state.kb_container:
+                        st.json(st.session_state.current_values.knowledge_base)
+
+                    with st.session_state.answer_container:
+                        st.json(st.session_state.current_values.answer)
+
+                    with st.session_state.scored_checklist_container:
+                        st.json(st.session_state.current_values.scored_checklist)
+                        
+
         # When processing is complete
         st.session_state.generating_answer = False
         st.session_state.processing = False
-        st.experimental_rerun()
+        # st.rerun()
     
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         st.session_state.generating_answer = False
         st.session_state.processing = False
-        st.experimental_rerun()
+        st.rerun()
 else:
     # Display current values if they exist
     if st.session_state.current_values:
