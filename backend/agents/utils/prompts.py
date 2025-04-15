@@ -4,6 +4,13 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import random
 
+class ChecklistItem(BaseModel):
+    item_to_score: str = Field(description="A specific requirement that should be addressed in the answer")
+    current_score: float = Field(description="Score between 0 and 1", ge=0, le=1, default=0.0)
+
+class ChecklistResponse(BaseModel):
+    items: List[ChecklistItem] = Field(description="List of requirements for a complete answer")
+
 class KnowledgeNugget(BaseModel):
     """A piece of information with its source"""
     content: str = Field(description="The actual information content")
@@ -11,13 +18,6 @@ class KnowledgeNugget(BaseModel):
     confidence: float = Field(description="Confidence in this information (0-1)", ge=0, le=1, default=1.0)
     conflicts_with: List[str] = Field(description="List of nugget IDs this conflicts with", default_factory=list)
     nugget_id: str = Field(description="Unique identifier for this nugget", default_factory=lambda: str(random.randint(1000, 9999)))
-
-class ChecklistItem(BaseModel):
-    item_to_score: str = Field(description="A specific requirement that should be addressed in the answer")
-    current_score: float = Field(description="Score between 0 and 1", ge=0, le=1, default=0.0)
-
-class ChecklistResponse(BaseModel):
-    items: List[ChecklistItem] = Field(description="List of requirements for a complete answer")
 
 class KnowledgeNuggetUpdate(BaseModel):
     """Update to an existing knowledge nugget"""

@@ -340,7 +340,8 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
 
 def should_continue_searching(state: State) -> bool:
     """Check if we should continue searching based on checklist scores"""
-    # Check if cancelled
+    return False
+
     if state.get("cancelled", False):
         return False
         
