@@ -40,8 +40,17 @@ from .utils.prompts import (
     create_checklist_prompt,
     create_scoring_prompt,
     ChecklistItem,
-    ChecklistResponse
+    ChecklistResponse,
+    create_kb_update_prompt
 )
+
+class KnowledgeNugget(BaseModel):
+    """A piece of information with its source"""
+    content: str = Field(description="The actual information content")
+    source_url: str = Field(description="URL where this information was found")
+    confidence: float = Field(description="Confidence in this information (0-1)", ge=0, le=1, default=1.0)
+    conflicts_with: List[str] = Field(description="List of nugget IDs this conflicts with", default_factory=list)
+    nugget_id: str = Field(description="Unique identifier for this nugget", default_factory=lambda: str(random.randint(1000, 9999)))
 
 class State(TypedDict):
     """State for the RAVE workflow"""
@@ -53,6 +62,7 @@ class State(TypedDict):
     query_history: List[str]
     search_results: List[Dict[str, Any]]
     current_query: str
+    knowledge_base: List[KnowledgeNugget]
 
 def validate_state(state: State) -> bool:
     """Validate the state before processing"""
@@ -209,15 +219,15 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         # Use the improved question if available, otherwise use the original
         question_to_use = state.get("improved_question", state["question"])
         
-        # Get checklist and search results
+        # Get checklist and knowledge base
         checklist = state.get("scored_checklist", [])
-        search_results = state.get("search_results", [])
+        knowledge_base = state.get("knowledge_base", [])
         
         # Format the prompt with all necessary information
         formatted_prompt = answer_prompt.format(
             question=question_to_use,
             checklist=json.dumps([item["item_to_score"] for item in checklist]),
-            search_results=json.dumps(search_results) if search_results else "No search results available"
+            knowledge_base=json.dumps([nugget.dict() for nugget in knowledge_base])
         )
         
         answer = llm.invoke(formatted_prompt)
@@ -262,6 +272,64 @@ def score_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, 
         writer({"msg": f"Error scoring answer: {str(e)}"})
         return {}
 
+def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    """Update the knowledge base with new information from search results"""
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    kb_update_prompt = create_kb_update_prompt()
+    
+    try:
+        writer({"msg": "Updating knowledge base..."})
+        
+        # Get current knowledge base and search results
+        current_kb = state.get("knowledge_base", [])
+        search_results = state.get("search_results", [])
+        
+        if not search_results:
+            writer({"msg": "No new search results to incorporate"})
+            return {"knowledge_base": current_kb}
+        
+        # Format the prompt with current KB and new search results
+        formatted_prompt = kb_update_prompt.format(
+            question=state["improved_question"],
+            current_kb=json.dumps([nugget.dict() for nugget in current_kb]),
+            search_results=json.dumps(search_results)
+        )
+        
+        # Get LLM's analysis of how to update the KB
+        kb_update_response = llm.invoke(formatted_prompt)
+        
+        # Parse the response to get new nuggets and updates
+        try:
+            update_data = json.loads(kb_update_response.content)
+            new_nuggets = [KnowledgeNugget(**nugget) for nugget in update_data.get("new_nuggets", [])]
+            updated_nuggets = [KnowledgeNugget(**nugget) for nugget in update_data.get("updated_nuggets", [])]
+            
+            # Update the knowledge base
+            updated_kb = current_kb.copy()
+            
+            # Remove updated nuggets and add their new versions
+            for nugget in updated_nuggets:
+                updated_kb = [n for n in updated_kb if n.nugget_id != nugget.nugget_id]
+                updated_kb.append(nugget)
+            
+            # Add new nuggets
+            updated_kb.extend(new_nuggets)
+            
+            writer({"msg": "Knowledge base updated successfully"})
+            return {"knowledge_base": updated_kb}
+            
+        except json.JSONDecodeError:
+            writer({"msg": "Error parsing knowledge base update response"})
+            return {"knowledge_base": current_kb}
+            
+    except Exception as e:
+        writer({"msg": f"Error updating knowledge base: {str(e)}"})
+        return {"knowledge_base": current_kb}
+
 # Define the graph
 graph_builder = StateGraph(State)
 
@@ -270,6 +338,7 @@ graph_builder.add_node("improve_question", improve_question)
 graph_builder.add_node("generate_scored_checklist", generate_scored_checklist)
 graph_builder.add_node("generate_query", generate_query)
 graph_builder.add_node("search", search)
+graph_builder.add_node("update_knowledge_base", update_knowledge_base)
 graph_builder.add_node("generate_answer", generate_answer)
 graph_builder.add_node("score_answer", score_answer)
 
@@ -278,7 +347,8 @@ graph_builder.add_edge(START, "improve_question")
 graph_builder.add_edge("improve_question", "generate_scored_checklist")
 graph_builder.add_edge("generate_scored_checklist", "generate_query")
 graph_builder.add_edge("generate_query", "search")
-graph_builder.add_edge("search", "generate_answer")
+graph_builder.add_edge("search", "update_knowledge_base")
+graph_builder.add_edge("update_knowledge_base", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
 graph_builder.add_edge("score_answer", END)
 

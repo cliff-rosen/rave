@@ -103,4 +103,34 @@ def create_scoring_prompt(format_instructions: str):
         Checklist: {checklist}
         
         Score each item in the checklist and return the updated checklist with scores.""")
+    ])
+
+def create_kb_update_prompt():
+    """Create a prompt for updating the knowledge base with new information"""
+    return ChatPromptTemplate.from_messages([
+        ("system", """You are an expert at analyzing and integrating information.
+        Your task is to update the knowledge base with new information from search results.
+        
+        For each piece of information:
+        1. Compare it with existing knowledge
+        2. Identify any conflicts or corroborations
+        3. Update confidence scores based on multiple sources
+        4. Create new nuggets for unique information
+        5. Update existing nuggets when new information is found
+        
+        When conflicts are found:
+        1. Create a new nugget documenting the conflict
+        2. Link conflicting nuggets together
+        3. Adjust confidence scores based on source reliability
+        
+        Return a JSON object with:
+        {
+            "new_nuggets": [list of new KnowledgeNugget objects],
+            "updated_nuggets": [list of updated KnowledgeNugget objects]
+        }"""),
+        ("user", """Question: {question}
+        Current Knowledge Base: {current_kb}
+        New Search Results: {search_results}
+        
+        Analyze and update the knowledge base:""")
     ]) 
