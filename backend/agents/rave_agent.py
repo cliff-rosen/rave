@@ -39,18 +39,12 @@ from .utils.prompts import (
     create_question_improvement_prompt,
     create_checklist_prompt,
     create_scoring_prompt,
+    create_kb_update_prompt,
     ChecklistItem,
     ChecklistResponse,
-    create_kb_update_prompt
+    KnowledgeNugget,
+    KBUpdateResponse
 )
-
-class KnowledgeNugget(BaseModel):
-    """A piece of information with its source"""
-    content: str = Field(description="The actual information content")
-    source_url: str = Field(description="URL where this information was found")
-    confidence: float = Field(description="Confidence in this information (0-1)", ge=0, le=1, default=1.0)
-    conflicts_with: List[str] = Field(description="List of nugget IDs this conflicts with", default_factory=list)
-    nugget_id: str = Field(description="Unique identifier for this nugget", default_factory=lambda: str(random.randint(1000, 9999)))
 
 class State(TypedDict):
     """State for the RAVE workflow"""
@@ -280,6 +274,7 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
     
     llm = ChatOpenAI(model=DEFAULT_MODEL)
     kb_update_prompt = create_kb_update_prompt()
+    parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
     
     try:
         writer({"msg": "Updating knowledge base..."})
@@ -302,31 +297,43 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
         # Get LLM's analysis of how to update the KB
         kb_update_response = llm.invoke(formatted_prompt)
         
-        # Parse the response to get new nuggets and updates
+        # Debug: Print raw response
+        print("Raw KB update response:", kb_update_response.content)
+        
         try:
-            update_data = json.loads(kb_update_response.content)
-            new_nuggets = [KnowledgeNugget(**nugget) for nugget in update_data.get("new_nuggets", [])]
-            updated_nuggets = [KnowledgeNugget(**nugget) for nugget in update_data.get("updated_nuggets", [])]
+            # Parse the response
+            update_data = parser.parse(kb_update_response.content)
             
             # Update the knowledge base
             updated_kb = current_kb.copy()
             
-            # Remove updated nuggets and add their new versions
-            for nugget in updated_nuggets:
-                updated_kb = [n for n in updated_kb if n.nugget_id != nugget.nugget_id]
-                updated_kb.append(nugget)
+            # Process updated nuggets
+            for update in update_data.updated_nuggets:
+                # Find the existing nugget
+                existing_nugget = next((n for n in updated_kb if n.nugget_id == update.nugget_id), None)
+                if existing_nugget:
+                    # Update the nugget with new values
+                    if update.content is not None:
+                        existing_nugget.content = update.content
+                    if update.confidence is not None:
+                        existing_nugget.confidence = update.confidence
+                    if update.conflicts_with is not None:
+                        existing_nugget.conflicts_with = update.conflicts_with
             
             # Add new nuggets
-            updated_kb.extend(new_nuggets)
+            updated_kb.extend(update_data.new_nuggets)
             
             writer({"msg": "Knowledge base updated successfully"})
             return {"knowledge_base": updated_kb}
             
-        except json.JSONDecodeError:
-            writer({"msg": "Error parsing knowledge base update response"})
+        except Exception as parse_error:
+            print("Error parsing KB update:", str(parse_error))
+            print("Response content:", kb_update_response.content)
+            writer({"msg": f"Error parsing knowledge base update: {str(parse_error)}"})
             return {"knowledge_base": current_kb}
             
     except Exception as e:
+        print("Error in KB update:", str(e))
         writer({"msg": f"Error updating knowledge base: {str(e)}"})
         return {"knowledge_base": current_kb}
 

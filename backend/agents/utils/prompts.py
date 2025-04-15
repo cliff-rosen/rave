@@ -1,7 +1,16 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
+import random
+
+class KnowledgeNugget(BaseModel):
+    """A piece of information with its source"""
+    content: str = Field(description="The actual information content")
+    source_url: str = Field(description="URL where this information was found")
+    confidence: float = Field(description="Confidence in this information (0-1)", ge=0, le=1, default=1.0)
+    conflicts_with: List[str] = Field(description="List of nugget IDs this conflicts with", default_factory=list)
+    nugget_id: str = Field(description="Unique identifier for this nugget", default_factory=lambda: str(random.randint(1000, 9999)))
 
 class ChecklistItem(BaseModel):
     item_to_score: str = Field(description="A specific requirement that should be addressed in the answer")
@@ -9,6 +18,18 @@ class ChecklistItem(BaseModel):
 
 class ChecklistResponse(BaseModel):
     items: List[ChecklistItem] = Field(description="List of requirements for a complete answer")
+
+class KnowledgeNuggetUpdate(BaseModel):
+    """Update to an existing knowledge nugget"""
+    nugget_id: str
+    content: Optional[str] = None
+    confidence: Optional[float] = None
+    conflicts_with: Optional[List[str]] = None
+
+class KBUpdateResponse(BaseModel):
+    """Response format for knowledge base updates"""
+    new_nuggets: List[KnowledgeNugget] = Field(default_factory=list)
+    updated_nuggets: List[KnowledgeNuggetUpdate] = Field(default_factory=list)
 
 def create_evaluator_prompt():
     """Create a prompt for evaluating answers"""
@@ -57,19 +78,21 @@ def create_direct_answer_prompt():
     return ChatPromptTemplate.from_messages([
         ("system", """You are an expert at providing clear and comprehensive answers.
         Your task is to generate an answer that addresses all the requirements in the checklist.
-        Use the search results to enhance your answer with relevant information.
-        Make sure to cite sources when using information from search results.
+        Use the knowledge base to enhance your answer with relevant information.
+        Make sure to cite sources when using information from the knowledge base.
         
         For each requirement in the checklist:
         1. Ensure your answer directly addresses it
         2. Provide specific details and examples where relevant
-        3. Use search results to support your points
+        3. Use knowledge base information to support your points
         4. If a requirement isn't fully addressed, acknowledge the gap
+        5. When citing information, include the source URL
+        6. For conflicting information, acknowledge the conflict and explain the different perspectives
         
         Structure your answer to be clear, well-organized, and comprehensive."""),
         ("user", """Question: {question}
         Checklist Requirements: {checklist}
-        Search Results: {search_results}
+        Knowledge Base: {knowledge_base}
         
         Generate a comprehensive answer that addresses all checklist requirements:""")
     ])
@@ -107,6 +130,9 @@ def create_scoring_prompt(format_instructions: str):
 
 def create_kb_update_prompt():
     """Create a prompt for updating the knowledge base with new information"""
+    parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
+    format_instructions = parser.get_format_instructions()
+    
     return ChatPromptTemplate.from_messages([
         ("system", """You are an expert at analyzing and integrating information.
         Your task is to update the knowledge base with new information from search results.
@@ -123,14 +149,10 @@ def create_kb_update_prompt():
         2. Link conflicting nuggets together
         3. Adjust confidence scores based on source reliability
         
-        Return a JSON object with:
-        {
-            "new_nuggets": [list of new KnowledgeNugget objects],
-            "updated_nuggets": [list of updated KnowledgeNugget objects]
-        }"""),
+        {format_instructions}"""),
         ("user", """Question: {question}
         Current Knowledge Base: {current_kb}
         New Search Results: {search_results}
         
-        Analyze and update the knowledge base:""")
-    ]) 
+        Analyze and update the knowledge base. Return a JSON object following the format instructions exactly:""")
+    ]).partial(format_instructions=format_instructions) 

@@ -169,7 +169,8 @@ with right_col:
             "question": question,
             "improved_question": None,
             "scored_checklist": [],
-            "answer": None
+            "answer": None,
+            "knowledge_base": []
         }
         
         # Process with the agent
