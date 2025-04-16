@@ -115,12 +115,15 @@ st.markdown("""
 
 ### Helper functions
 
-def debug_output(message):
-    with st.session_state.debug_container:
-        st.text(message)
+def output_history():
+    with st.session_state.history_container:
+        if st.session_state.values_history:
+            st.json(st.session_state.values_history)
+        else:
+            st.text("No history yet")
 
 def output_values(output_data):
-    debug_output("output_values: " + str(output_data))
+    
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
@@ -154,6 +157,7 @@ def update_values(output_data):
     st.session_state.current_values = output_data
     st.session_state.values_history.append(output_data)
     output_values(output_data)
+    output_history()
 
 def output_status_messages():
     # Display the radio selection with original messages
@@ -171,7 +175,7 @@ def output_status_messages():
             idx = int(selected_status[1:selected_status.index(']')])
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
-                debug_output("output_values: " + st.session_state.values_history[idx]["improved_question"])
+                output_history()
 
 def update_status_messages(message):
     value_update_idx = len(st.session_state.values_history)
@@ -184,6 +188,9 @@ def agent_process(question):
         "messages": [],
         "question": question,
         "improved_question": None,
+        "current_query": None,
+        "query_history": [],
+        "search_results": [],
         "scored_checklist": [],
         "answer": None,
         "knowledge_base": []
@@ -207,7 +214,7 @@ def agent_process(question):
 
 ### Create layout
 
-left_col, search_col, kb_col, answer_col, score_col, debug_col = st.columns([1, 2, 2, 2, 2, 1])
+left_col, search_col, kb_col, answer_col, score_col, history_col = st.columns([1, 2, 2, 2, 2, 1])
 
 # Left column - Header, title, question input, and process updates
 with left_col:
@@ -304,9 +311,12 @@ with score_col:
     if "scored_checklist_container" not in st.session_state:
         st.session_state.scored_checklist_container = st.empty()
 
-# Debug column
-with debug_col:
-    st.session_state.debug_container = st.expander("Debug", expanded=False)
+# Values History column
+with history_col:
+    st.header("History")
+    st.markdown("---")
+    if "history_container" not in st.session_state:
+        st.session_state.history_container = st.empty()
 
 
 ### Main processing
