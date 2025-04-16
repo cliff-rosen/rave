@@ -19,8 +19,14 @@ if 'initialized' not in st.session_state:
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
     st.session_state.cancelled = False
-    st.session_state.button_container = None
-    st.session_state.status_container = None
+    # containers
+    st.session_state.improved_question_container = None
+    st.session_state.query_container = None
+    st.session_state.query_history_container = None
+    st.session_state.search_res_container = None
+    st.session_state.kb_container = None
+    st.session_state.answer_container = None
+    st.session_state.scored_checklist_container = None
     
     # Initialize settings
     st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
@@ -58,7 +64,7 @@ st.markdown("""
     
     header {
         background-color: var(--background-color);
-        visibility: hidden;
+        visibility: xhidden;
     }
     
     /* Status area styling */
@@ -108,7 +114,7 @@ st.markdown("""
     
     /* Hide hamburger menu and footer */
     .stDeployButton, footer, #MainMenu {
-        visibility: hidden;
+        visibility: xhidden;
     }
     
     /* Custom buttons */
@@ -133,6 +139,10 @@ def output_values(output_data):
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
+            print("****************************")
+            print("improved_question", output_data["improved_question"])
+            print("container type", type(st.session_state.improved_question_container))
+            print("****************************")
             st.write(output_data["improved_question"])
     
     with st.session_state.query_container:
@@ -329,6 +339,11 @@ with left_col:
             update_status_messages("Cancelled by user")
             output_values(st.session_state.current_values)
             #st.experimental_rerun()
+    if st.button("go"):
+        st.write("go2")
+        with st.session_state.improved_question_container:
+            st.write("improved_question")
+        #st.experimental_rerun()
 
     # Question input
     question = st.text_input(
