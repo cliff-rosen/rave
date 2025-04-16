@@ -125,9 +125,12 @@ st.markdown("""
 
 ### Helper functions
 
+def output_debug_info(output_data):
+    with st.session_state.debug_container:
+        st.json(output_data)
 
 def output_values(output_data):
-    
+
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
@@ -151,7 +154,8 @@ def output_values(output_data):
     
     with st.session_state.answer_container:
         if "answer" in output_data:
-            st.json({"answer": output_data["answer"]})
+            # Display answer in markdown format
+            st.markdown(output_data["answer"])
     
     with st.session_state.scored_checklist_container:
         if "scored_checklist" in output_data:
@@ -179,6 +183,7 @@ def output_status_messages():
             idx = int(selected_status[1:selected_status.index(']')])
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
+                output_debug_info(idx + " " + str(st.session_state.values_history[idx]))
 
 def update_status_messages(message):
     value_update_idx = len(st.session_state.values_history)
@@ -350,22 +355,19 @@ with search_col:
     # Improved question display
     st.markdown("### Improved Question")
     st.session_state.improved_question_container = st.empty()
-    
+
 
     # Current query
     st.markdown("### Current Query")
-    if "query_container" not in st.session_state:
-        st.session_state.query_container = st.empty()
+    st.session_state.query_container = st.empty()
     
     # Query history
     st.markdown("### Query History")
-    if "query_history_container" not in st.session_state:
-        st.session_state.query_history_container = st.empty()
+    st.session_state.query_history_container = st.empty()
     
     # Search results
     st.markdown("### Search Results")
-    if "search_res_container" not in st.session_state:
-        st.session_state.search_res_container = st.empty()
+    st.session_state.search_res_container = st.empty()
 
 # Knowledge Base column
 with kb_col:
@@ -387,6 +389,12 @@ with score_col:
     st.markdown("---")
     if "scored_checklist_container" not in st.session_state:
         st.session_state.scored_checklist_container = st.empty()
+
+
+st.header("Debug")
+st.markdown("---")
+if "debug_container" not in st.session_state:
+    st.session_state.debug_container = st.empty()
 
 ### Main processing
 

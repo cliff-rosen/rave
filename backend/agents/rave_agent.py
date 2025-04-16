@@ -200,7 +200,7 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         return {}
 
 def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
-    """Generate an answer to the improved question"""
+    """Generate an answer to the improved question in markdown format"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
@@ -217,11 +217,12 @@ def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) 
         checklist = state.get("scored_checklist", [])
         knowledge_base = state.get("knowledge_base", [])
         
-        # Format the prompt with all necessary information
+        # Format the prompt with all necessary information and markdown instruction
         formatted_prompt = answer_prompt.format(
             question=question_to_use,
             checklist=json.dumps([item["item_to_score"] for item in checklist]),
-            knowledge_base=json.dumps([nugget.dict() for nugget in knowledge_base])
+            knowledge_base=json.dumps([nugget.dict() for nugget in knowledge_base]),
+            format_instructions="Please format your answer in markdown, using appropriate headings, lists, and formatting to make the information clear and well-structured."
         )
         
         answer = llm.invoke(formatted_prompt)
@@ -349,7 +350,7 @@ def should_continue_searching(state: State, config: Dict[str, Any]) -> bool:
     max_iterations = config["configurable"]["max_iterations"]
     
     # Check if we've reached max iterations
-    if current_iterations > max_iterations:
+    if current_iterations >= max_iterations:
         print("Max iterations reached")
         return False
     
@@ -382,8 +383,6 @@ graph_builder.add_edge("generate_query", "search")
 graph_builder.add_edge("search", "update_knowledge_base")
 graph_builder.add_edge("update_knowledge_base", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
-
-# Add conditional edge after scoring
 graph_builder.add_conditional_edges(
     "score_answer",
     should_continue_searching,
