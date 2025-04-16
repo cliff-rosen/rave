@@ -385,7 +385,7 @@ with left_col:
             st.session_state.processing_status = "CANCELLING"
             st.session_state.generating_answer = False
             st.write("Cancelled")
-            update_status_messages("Cancelled by user")
+            # update_status_messages("Cancelled by user")
             output_values(st.session_state.current_values)
 
     if st.button("go"):
