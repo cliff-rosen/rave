@@ -111,6 +111,20 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+
+def output_status_messages():
+    messages = ""
+    for msg in st.session_state.status_messages:
+        messages += f'<div class="status-message">{msg}</div>'
+
+    # Display all status messages
+    with st.session_state.status_container:
+        st.markdown(messages, unsafe_allow_html=True)    
+
+def update_status_messages(message):
+    st.session_state.status_messages.append(message)
+    output_status_messages()
+
 ### Create layout
 left_col, search_col, kb_col, answer_col, score_col = st.columns([2, 2, 2, 2, 2])
 
@@ -131,7 +145,8 @@ with left_col:
         st.session_state.processing_status = "CANCELLING"
         st.session_state.generating_answer = False
         st.write("Cancelled")
-        st.experimental_rerun()
+        update_status_messages("Cancelled by user")
+        #st.experimental_rerun()
 
     # New Conversation button
     if st.button("New Conversation"):
@@ -165,10 +180,8 @@ with left_col:
     if st.session_state.status_container is None:
         st.session_state.status_container = st.empty()
     
-    # # Display all current status messages
-    # with st.session_state.status_container:
-    #     for msg in st.session_state.status_messages:
-    #         st.markdown(f'<div class="status-message">{msg}</div>', unsafe_allow_html=True)
+    # Display all current status messages
+    output_status_messages()
 
 # Search column - Query and search results
 with search_col:
@@ -207,17 +220,6 @@ with score_col:
 
 
 ### Helper functions
-
-def update_status_messages(message):
-    st.session_state.status_messages.append(message)
-    
-    messages = ""
-    for msg in st.session_state.status_messages:
-        messages += f'<div class="status-message">{msg}</div>'
-
-    # Display all status messages
-    with st.session_state.status_container:
-        st.markdown(messages, unsafe_allow_html=True)    
 
 def update_values(output_data):
     st.session_state.current_values = output_data
@@ -263,9 +265,9 @@ def agent_process(question):
 
     # Process with the agent
     for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-        print(output)
+        print("output: " + str(output))
         if st.session_state.cancelled:
-            st.session_state.processing_status = "WAITING FOR INPUT"
+            print("Cancelled by user")
             update_status_messages({"msg": "Cancelled by user"})
             break
         if isinstance(output, tuple):
@@ -292,13 +294,10 @@ if question and st.session_state.processing_status == "WAITING FOR INPUT":
 
     agent_process(st.session_state.current_question)
 
-
     st.session_state.generating_answer = False
     st.session_state.processing_status = "COMPLETED"
     # st.rerun()
 
-else:
-    st.write("Processing status: ", st.session_state.processing_status)
 
 # Add a status footer for the "Generating answer..." message when needed
 if st.session_state.generating_answer:
