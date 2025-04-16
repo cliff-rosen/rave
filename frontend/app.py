@@ -17,7 +17,6 @@ if 'initialized' not in st.session_state:
     st.session_state.processing_status = "WAITING FOR INPUT"
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
-    st.session_state.values_container = None
     st.session_state.cancelled = False
     st.session_state.button_container = None
     st.session_state.status_container = None
@@ -247,7 +246,6 @@ with left_col:
         st.session_state.processing_status = "WAITING FOR INPUT"
         st.session_state.generating_answer = False
         st.session_state.should_rerun = True
-        st.session_state.values_container = None
         st.session_state.cancelled = False
         st.experimental_rerun()
     
