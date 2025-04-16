@@ -257,6 +257,9 @@ def agent_process(question):
 
     # Process with the agent
     for output in graph.stream(initial_state, config=config, stream_mode=["values", "custom"]):
+        print("****************************")
+        print("values history[0]", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
+        print("****************************")
         if isinstance(output, tuple):
             output_type, output_data = output
             
