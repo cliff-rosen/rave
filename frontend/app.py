@@ -134,11 +134,11 @@ def output_values(output_data):
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
-            st.json({"improved_question": output_data["improved_question"]})
+            st.write(output_data["improved_question"])
     
     with st.session_state.query_container:
         if "current_query" in output_data:
-            st.json({"current_query": output_data["current_query"]})
+            st.write(output_data["current_query"])
     
     with st.session_state.query_history_container:
         if "query_history" in output_data:
