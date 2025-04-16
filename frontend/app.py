@@ -12,6 +12,7 @@ if 'initialized' not in st.session_state:
     st.session_state.current_question = ""
     st.session_state.status_messages = []
     st.session_state.current_values = {}
+    st.session_state.values_history = []
     st.session_state.last_question = ""
     st.session_state.processing_status = "WAITING FOR INPUT"
     st.session_state.generating_answer = False
@@ -112,6 +113,45 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+### Helper functions
+
+def output_values(output_data):
+    print("output_values: " + str(output_data))
+    # Update all containers with their respective values
+    with st.session_state.improved_question_container:
+        if "improved_question" in output_data:
+            st.json({"improved_question": output_data["improved_question"]})
+    
+    with st.session_state.query_container:
+        if "current_query" in output_data:
+            st.json({"current_query": output_data["current_query"]})
+    
+    with st.session_state.query_history_container:
+        if "query_history" in output_data:
+            st.json({"query_history": output_data["query_history"]})
+    
+    with st.session_state.search_res_container:
+        if "search_results" in output_data:
+            st.json({"search_results": output_data["search_results"]})
+    
+    with st.session_state.kb_container:
+        if "knowledge_base" in output_data:
+            st.json({"knowledge_base": output_data["knowledge_base"]})
+    
+    with st.session_state.answer_container:
+        if "answer" in output_data:
+            st.json({"answer": output_data["answer"]})
+    
+    with st.session_state.scored_checklist_container:
+        if "scored_checklist" in output_data:
+            st.json({"scored_checklist": output_data["scored_checklist"]})
+
+def update_values(output_data):
+    st.session_state.current_values = output_data
+    st.session_state.values_history.append(output_data)
+
+    output_values(output_data)
+
 def output_status_messages():
     messages = ""
     for msg in st.session_state.status_messages:
@@ -125,8 +165,35 @@ def update_status_messages(message):
     st.session_state.status_messages.append(message)
     output_status_messages()
 
+def agent_process(question):
+    initial_state = {
+        "messages": [],
+        "question": question,
+        "improved_question": None,
+        "scored_checklist": [],
+        "answer": None,
+        "knowledge_base": []
+    }
+
+    # Process with the agent
+    for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
+        print("output: " + str(output))
+
+        if isinstance(output, tuple):
+            output_type, output_data = output
+            
+            if output_type == "custom":
+                # Add new status message
+                update_status_messages(output_data.get("msg", ""))
+            
+            elif output_type == "values":
+                # Update values in the main area
+                update_values(output_data)
+
+
 ### Create layout
-left_col, search_col, kb_col, answer_col, score_col = st.columns([2, 2, 2, 2, 2])
+
+left_col, search_col, kb_col, answer_col, score_col = st.columns([1, 2, 2, 2, 2])
 
 # Left column - Header, title, question input, and process updates
 with left_col:
@@ -146,6 +213,7 @@ with left_col:
         st.session_state.generating_answer = False
         st.write("Cancelled")
         update_status_messages("Cancelled by user")
+        output_values(st.session_state.current_values)
         #st.experimental_rerun()
 
     # New Conversation button
@@ -153,6 +221,7 @@ with left_col:
         st.session_state.current_question = ""
         st.session_state.status_messages = []
         st.session_state.current_values = {}
+        st.session_state.values_history = []
         st.session_state.last_question = ""
         st.session_state.processing_status = "WAITING FOR INPUT"
         st.session_state.generating_answer = False
@@ -198,88 +267,30 @@ with search_col:
     
     # Search results
     st.markdown("### Search Results")
-    st.session_state.search_res_container = st.empty()
+    if "search_res_container" not in st.session_state:
+        st.session_state.search_res_container = st.empty()
 
 # Knowledge Base column
 with kb_col:
     st.header("Knowledge Base")
     st.markdown("---")
-    st.session_state.kb_container = st.empty()
+    if "kb_container" not in st.session_state:
+        st.session_state.kb_container = st.empty()
 
 # Answer column
 with answer_col:
     st.header("Answer")
     st.markdown("---")
-    st.session_state.answer_container = st.empty()
+    if "answer_container" not in st.session_state:
+        st.session_state.answer_container = st.empty()
 
 # Scorecard column
 with score_col:
     st.header("Scorecard")
     st.markdown("---")
-    st.session_state.scored_checklist_container = st.empty()
+    if "scored_checklist_container" not in st.session_state:
+        st.session_state.scored_checklist_container = st.empty()
 
-
-### Helper functions
-
-def update_values(output_data):
-    st.session_state.current_values = output_data
-
-    # Update all containers with their respective values
-    with st.session_state.improved_question_container:
-        if "improved_question" in output_data:
-            st.json({"improved_question": output_data["improved_question"]})
-    
-    with st.session_state.query_container:
-        if "current_query" in output_data:
-            st.json({"current_query": output_data["current_query"]})
-    
-    with st.session_state.query_history_container:
-        if "query_history" in output_data:
-            st.json({"query_history": output_data["query_history"]})
-    
-    with st.session_state.search_res_container:
-        if "search_results" in output_data:
-            st.json({"search_results": output_data["search_results"]})
-    
-    with st.session_state.kb_container:
-        if "knowledge_base" in output_data:
-            st.json({"knowledge_base": output_data["knowledge_base"]})
-    
-    with st.session_state.answer_container:
-        if "answer" in output_data:
-            st.json({"answer": output_data["answer"]})
-    
-    with st.session_state.scored_checklist_container:
-        if "scored_checklist" in output_data:
-            st.json({"scored_checklist": output_data["scored_checklist"]})
-
-def agent_process(question):
-    initial_state = {
-        "messages": [],
-        "question": question,
-        "improved_question": None,
-        "scored_checklist": [],
-        "answer": None,
-        "knowledge_base": []
-    }
-
-    # Process with the agent
-    for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-        print("output: " + str(output))
-        if st.session_state.cancelled:
-            print("Cancelled by user")
-            update_status_messages({"msg": "Cancelled by user"})
-            break
-        if isinstance(output, tuple):
-            output_type, output_data = output
-            
-            if output_type == "custom":
-                # Add new status message
-                update_status_messages(output_data.get("msg", ""))
-            
-            elif output_type == "values":
-                # Update values in the main area
-                update_values(output_data)
 
 
 ### Main processing
