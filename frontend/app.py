@@ -279,11 +279,13 @@ with search_col:
     
     # Current query
     st.markdown("### Current Query")
-    st.session_state.query_container = st.empty()
+    if "query_container" not in st.session_state:
+        st.session_state.query_container = st.empty()
     
     # Query history
     st.markdown("### Query History")
-    st.session_state.query_history_container = st.empty()
+    if "query_history_container" not in st.session_state:
+        st.session_state.query_history_container = st.empty()
     
     # Search results
     st.markdown("### Search Results")
