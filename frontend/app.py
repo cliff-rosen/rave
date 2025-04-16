@@ -6,7 +6,22 @@ import time
 # Load environment variables
 load_dotenv()
 
-# Page configuration
+### Initialize session state variables
+if 'initialized' not in st.session_state:
+    st.session_state.initialized = True
+    st.session_state.current_question = ""
+    st.session_state.status_messages = []
+    st.session_state.current_values = {}
+    st.session_state.last_question = ""
+    st.session_state.processing_status = "WAITING FOR INPUT"
+    st.session_state.generating_answer = False
+    st.session_state.should_rerun = False
+    st.session_state.values_container = None
+    st.session_state.cancelled = False
+    st.session_state.button_container = None
+    st.session_state.status_container = None
+
+### Page configuration
 st.set_page_config(
     page_title="RAVE - Recursive Agent for Verified Explanations",
     page_icon="🤖",
@@ -96,22 +111,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Initialize session state variables
-if 'initialized' not in st.session_state:
-    st.session_state.initialized = True
-    st.session_state.current_question = ""
-    st.session_state.status_messages = []
-    st.session_state.current_values = {}
-    st.session_state.last_question = ""
-    st.session_state.processing_status = "WAITING FOR INPUT"
-    st.session_state.generating_answer = False
-    st.session_state.should_rerun = False
-    st.session_state.values_container = None
-    st.session_state.cancelled = False
-    st.session_state.button_container = None
-    st.session_state.status_container = None
-
-# Create columns with new layout
+### Create layout
 left_col, search_col, kb_col, answer_col, score_col = st.columns([2, 2, 2, 2, 2])
 
 # Left column - Header, title, question input, and process updates
@@ -205,15 +205,8 @@ with score_col:
     st.markdown("---")
     st.session_state.scored_checklist_container = st.empty()
 
-# Set processing state if we have a new question
-if question and st.session_state.processing_status == "WAITING FOR INPUT":
-    st.session_state.last_question = question
-    st.session_state.processing_status = "STARTING"
-    st.session_state.generating_answer = True
-    st.session_state.cancelled = False
-    st.session_state.status_messages = []
-    st.rerun()
 
+### Helper functions
 
 def update_status_messages(message):
     st.session_state.status_messages.append(message)
@@ -258,9 +251,6 @@ def update_values(output_data):
         if "scored_checklist" in output_data:
             st.json({"scored_checklist": output_data["scored_checklist"]})
 
-# Process the question if we're in processing state
-
-
 def agent_process(question):
     initial_state = {
         "messages": [],
@@ -288,14 +278,21 @@ def agent_process(question):
             elif output_type == "values":
                 # Update values in the main area
                 update_values(output_data)
-                
 
-if st.session_state.processing_status == "STARTING":
+
+### Main processing
+
+# Set processing state if we have a new question
+if question and st.session_state.processing_status == "WAITING FOR INPUT":
+
     st.session_state.processing_status = "PROCESSING"
+    st.session_state.generating_answer = True
+    st.session_state.cancelled = False
+    st.session_state.status_messages = []
 
     agent_process(st.session_state.current_question)
 
-    # When processing is complete
+
     st.session_state.generating_answer = False
     st.session_state.processing_status = "COMPLETED"
     # st.rerun()
