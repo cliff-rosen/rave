@@ -185,8 +185,8 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         # search_results = search.invoke(test_query)
         
         # Debug: Print raw search results
-        print("Raw search results:", search_results)
-        print("Type of search results:", type(search_results))
+        # print("Raw search results:", search_results)
+        # print("Type of search results:", type(search_results))
         
         if not search_results:
             writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})

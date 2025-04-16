@@ -185,11 +185,21 @@ def output_values(output_data):
         if "scored_checklist" in output_data:
             st.json({"scored_checklist": output_data["scored_checklist"]})
 
+def update_history(output_data):
+    print("****************************")
+    print("****************************")
+    print("update_history before update", st.session_state.values_history)
+    print("****************************")
+    st.session_state.values_history.append(output_data)
+    print("****************************")    
+    print("update_history after update", st.session_state.values_history)
+    print("****************************")
+    output_history(st.session_state.values_history)
+
 def update_values(output_data):
     st.session_state.current_values = output_data
-    st.session_state.values_history.append(output_data)
+    update_history(output_data)
     output_values(output_data)
-    output_history(st.session_state.values_history)
 
 def output_status_messages():
     # Display the radio selection with original messages
