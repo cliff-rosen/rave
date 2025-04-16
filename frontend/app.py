@@ -149,9 +149,7 @@ def output_values(output_data):
 def update_values(output_data):
     st.session_state.current_values = output_data
     st.session_state.values_history.append(output_data)
-
     output_values(output_data)
-
 
 def output_status_messages():
     # Display the radio selection with original messages
@@ -171,9 +169,9 @@ def output_status_messages():
                 output_values(st.session_state.values_history[idx])
 
 def update_status_messages(message):
-    value_update_idx = len(st.session_state.values_history) - 1
-    mesage = "[" + str(value_update_idx) + "] " + message
-    st.session_state.status_messages.append(mesage)
+    value_update_idx = len(st.session_state.values_history)
+    message = "[" + str(value_update_idx) + "] " + message
+    st.session_state.status_messages.append(message)
     output_status_messages()
 
 def agent_process(question):
@@ -188,7 +186,7 @@ def agent_process(question):
 
     # Process with the agent
     for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-        print("output: " + str(output))
+        # print("output: " + str(output))
 
         if isinstance(output, tuple):
             output_type, output_data = output
@@ -257,8 +255,7 @@ with left_col:
     
     # Status messages area
     st.markdown("### Process Updates")
-    if st.session_state.status_container is None:
-        st.session_state.status_container = st.empty()
+    st.session_state.status_container = st.empty()
     
     # Display all current status messages
     output_status_messages()

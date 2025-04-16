@@ -166,8 +166,6 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         if not TAVILY_API_KEY:
             writer({"msg": "Error: TAVILY_API_KEY not set"})
             return {}
-        else:
-            writer({"msg": "using TAVILY_API_KEY: " + TAVILY_API_KEY})   
         
         # Initialize Tavily search
         search = TavilySearchResults(api_key=TAVILY_API_KEY, max_results=MAX_SEARCH_RESULTS)
