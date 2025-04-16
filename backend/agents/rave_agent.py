@@ -66,14 +66,14 @@ def validate_state(state: State) -> bool:
         return False
     return True
 
-def improve_question(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def improve_question(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Improve the question for clarity and completeness"""
     print("improve_question")
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["question_model"])
     improvement_prompt = create_question_improvement_prompt()
     
     try:
@@ -88,13 +88,13 @@ def improve_question(state: State, writer: StreamWriter) -> AsyncIterator[Dict[s
         writer({"msg": f"Error improving question: {str(e)}"})
         return {}
 
-def generate_scored_checklist(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def generate_scored_checklist(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate a checklist of requirements for a well-formed answer"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["checklist_model"])
     parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
     
     try:
@@ -118,13 +118,13 @@ def generate_scored_checklist(state: State, writer: StreamWriter) -> AsyncIterat
         writer({"msg": f"Error generating checklist: {str(e)}"})
         return {}
 
-def generate_query(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def generate_query(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate a search query based on the question and checklist"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["query_model"])
     query_generator_prompt = create_query_generator_prompt()
     
     try:
@@ -199,13 +199,13 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         writer({"msg": f"Error performing search: {str(e)}"})
         return {}
 
-def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate an answer to the improved question"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["answer_model"])
     answer_prompt = create_direct_answer_prompt()
     
     try:
@@ -233,13 +233,13 @@ def generate_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[st
         writer({"msg": f"Error generating answer: {str(e)}"})
         return {}
 
-def score_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def score_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Score the answer against the checklist requirements"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["scoring_model"])
     parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
     
     try:
@@ -266,13 +266,13 @@ def score_answer(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, 
         writer({"msg": f"Error scoring answer: {str(e)}"})
         return {}
 
-def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Update the knowledge base with new information from search results"""
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=DEFAULT_MODEL)
+    llm = ChatOpenAI(model=config["configurable"]["kb_model"])
     kb_update_prompt = create_kb_update_prompt()
     parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
     
@@ -337,10 +337,8 @@ def update_knowledge_base(state: State, writer: StreamWriter) -> AsyncIterator[D
         writer({"msg": f"Error updating knowledge base: {str(e)}"})
         return {"knowledge_base": current_kb}
 
-def should_continue_searching(state: State) -> bool:
+def should_continue_searching(state: State, config: Dict[str, Any]) -> bool:
     """Check if we should continue searching based on checklist scores"""
-    return False
-
     if state.get("cancelled", False):
         return False
         
@@ -348,8 +346,8 @@ def should_continue_searching(state: State) -> bool:
     if not checklist:
         return False
     
-    # Check if any item has a score less than 1
-    return any(item.get("current_score", 0) < 1.0 for item in checklist)
+    # Check if any item has a score less than the threshold
+    return any(item.get("current_score", 0) < config["configurable"]["score_threshold"] for item in checklist)
 
 TEST_MODE = False
 def is_test_mode(state: State) -> bool:
@@ -399,8 +397,8 @@ graph_builder.add_conditional_edges(
     "score_answer",
     should_continue_searching,
     {
-        True: "generate_query",  # If scores < 1, go back to generate_query
-        False: END  # If all scores are 1, we're done
+        True: "generate_query",  # If scores < threshold, go back to generate_query
+        False: END  # If all scores are above threshold, we're done
     }
 )
 

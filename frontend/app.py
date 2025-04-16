@@ -1,5 +1,6 @@
 import streamlit as st
 from backend.agents.rave_agent import graph
+from backend.config.models import OpenAIModel, get_model_config
 from dotenv import load_dotenv
 import time
 
@@ -20,6 +21,16 @@ if 'initialized' not in st.session_state:
     st.session_state.cancelled = False
     st.session_state.button_container = None
     st.session_state.status_container = None
+    
+    # Initialize settings
+    st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.checklist_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.query_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.answer_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.scoring_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.kb_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.max_iterations = 3
+    st.session_state.score_threshold = 0.9
 
 ### Page configuration
 st.set_page_config(
@@ -195,10 +206,22 @@ def agent_process(question):
         "knowledge_base": []
     }
 
-    # Process with the agent
-    for output in graph.stream(initial_state, stream_mode=["values", "custom"]):
-        # print("output: " + str(output))
+    # Create config with model settings
+    config = {
+        "configurable": {
+            "question_model": st.session_state.question_model,
+            "checklist_model": st.session_state.checklist_model,
+            "query_model": st.session_state.query_model,
+            "answer_model": st.session_state.answer_model,
+            "scoring_model": st.session_state.scoring_model,
+            "kb_model": st.session_state.kb_model,
+            "max_iterations": st.session_state.max_iterations,
+            "score_threshold": st.session_state.score_threshold
+        }
+    }
 
+    # Process with the agent
+    for output in graph.stream(initial_state, config=config, stream_mode=["values", "custom"]):
         if isinstance(output, tuple):
             output_type, output_data = output
             
@@ -212,6 +235,64 @@ def agent_process(question):
 
 
 ### Create layout
+
+# Settings Sidebar
+with st.sidebar:
+    st.title("Settings")
+    
+    st.subheader("Model Selection")
+    st.session_state.question_model = st.selectbox(
+        "Question Improvement Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.question_model)
+    )
+    
+    st.session_state.checklist_model = st.selectbox(
+        "Checklist Generation Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.checklist_model)
+    )
+    
+    st.session_state.query_model = st.selectbox(
+        "Query Generation Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.query_model)
+    )
+    
+    st.session_state.answer_model = st.selectbox(
+        "Answer Generation Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.answer_model)
+    )
+    
+    st.session_state.scoring_model = st.selectbox(
+        "Scoring Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.scoring_model)
+    )
+    
+    st.session_state.kb_model = st.selectbox(
+        "Knowledge Base Model",
+        options=[model.value["name"] for model in OpenAIModel],
+        index=[model.value["name"] for model in OpenAIModel].index(st.session_state.kb_model)
+    )
+    
+    st.subheader("Graph Settings")
+    st.session_state.max_iterations = st.slider(
+        "Maximum Iterations",
+        min_value=1,
+        max_value=10,
+        value=st.session_state.max_iterations,
+        step=1
+    )
+    
+    st.session_state.score_threshold = st.slider(
+        "Score Threshold",
+        min_value=0.0,
+        max_value=1.0,
+        value=st.session_state.score_threshold,
+        step=0.05
+    )
 
 left_col, search_col, kb_col, answer_col, score_col, history_col = st.columns([1, 2, 2, 2, 2, 1])
 
