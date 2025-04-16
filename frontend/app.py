@@ -128,10 +128,10 @@ with left_col:
     
     if st.button("Cancel"):
         st.session_state.cancelled = True
-        st.session_state.processing_status = "WAITING FOR INPUT"
+        st.session_state.processing_status = "CANCELLING"
         st.session_state.generating_answer = False
         st.write("Cancelled")
-        # st.experimental_rerun()
+        st.experimental_rerun()
 
     # New Conversation button
     if st.button("New Conversation"):
@@ -276,7 +276,7 @@ def agent_process(question):
         print(output)
         if st.session_state.cancelled:
             st.session_state.processing_status = "WAITING FOR INPUT"
-            update_status_messages("Cancelled by user")
+            update_status_messages({"msg": "Cancelled by user"})
             break
         if isinstance(output, tuple):
             output_type, output_data = output
@@ -301,10 +301,7 @@ if st.session_state.processing_status == "STARTING":
     # st.rerun()
 
 else:
-    # Display current values if they exist
-    if st.session_state.current_values:
-        with st.session_state.values_container:
-            st.json(st.session_state.current_values)
+    st.write("Processing status: ", st.session_state.processing_status)
 
 # Add a status footer for the "Generating answer..." message when needed
 if st.session_state.generating_answer:
