@@ -149,6 +149,9 @@ def output_history(output_data):
         st.json(output_data)
 
 def output_debug_info(output_data):
+    print("****************************")
+    print("output_debug_info", output_data)
+    print("****************************")
     with st.session_state.debug_container:
         st.json(output_data)
 
@@ -186,14 +189,9 @@ def output_values(output_data):
             st.json({"scored_checklist": output_data["scored_checklist"]})
 
 def update_history(output_data):
-    print("****************************")
-    print("****************************")
     print("update_history before update", st.session_state.values_history)
-    print("****************************")
     st.session_state.values_history.append(output_data)
-    print("****************************")    
     print("update_history after update", st.session_state.values_history)
-    print("****************************")
     output_history(st.session_state.values_history)
 
 def update_values(output_data):
@@ -219,6 +217,9 @@ def output_status_messages():
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
                 output_debug_info(st.session_state.values_history[idx])
+            else:
+                print("selected_status index out of range", idx)
+                output_debug_info(st.session_state.values_history[0])
 
 # store messages as list of {"update_idx": value_update_idx, "message": message}
 def update_status_messages(message):
@@ -259,7 +260,6 @@ def agent_process(question):
     for output in graph.stream(initial_state, config=config, stream_mode=["values", "custom"]):
         print("****************************")
         print("values history[0]", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
-        print("****************************")
         if isinstance(output, tuple):
             output_type, output_data = output
             
