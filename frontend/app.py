@@ -152,17 +152,28 @@ def update_values(output_data):
 
     output_values(output_data)
 
-def output_status_messages():
-    messages = ""
-    for msg in st.session_state.status_messages:
-        messages += f'<div class="status-message">{msg}</div>'
 
-    # Display all status messages
+def output_status_messages():
+    # Display the radio selection with original messages
     with st.session_state.status_container:
-        st.markdown(messages, unsafe_allow_html=True)    
+        selected_status = st.radio(
+            "Process Updates",
+            options=st.session_state.status_messages,
+            index=len(st.session_state.status_messages) - 1 if st.session_state.status_messages else 0,
+            label_visibility="collapsed"
+        )
+        
+        # If a status is selected, show the corresponding values
+        if selected_status:
+            # Extract the index from the selected status (it's already in [n] format)
+            idx = int(selected_status[1:selected_status.index(']')])
+            if 0 <= idx < len(st.session_state.values_history):
+                output_values(st.session_state.values_history[idx])
 
 def update_status_messages(message):
-    st.session_state.status_messages.append(message)
+    value_update_idx = len(st.session_state.values_history) - 1
+    mesage = "[" + str(value_update_idx) + "] " + message
+    st.session_state.status_messages.append(mesage)
     output_status_messages()
 
 def agent_process(question):
