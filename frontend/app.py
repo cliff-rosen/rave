@@ -9,17 +9,30 @@ load_dotenv()
 
 ### Initialize session state variables
 if 'initialized' not in st.session_state:
+    # Initialized
     st.session_state.initialized = True
+
+    # State
     st.session_state.current_question = ""
+    st.session_state.improved_question = ""
+    st.session_state.current_query = ""
+    st.session_state.query_history = []
+    st.session_state.search_results = []
+    st.session_state.knowledge_base = []
+    st.session_state.answer = ""
+    st.session_state.scored_checklist = []
     st.session_state.status_messages = []
     st.session_state.current_values = {}
     st.session_state.values_history = []
     st.session_state.last_question = ""
+
+    # Processing status
     st.session_state.processing_status = "WAITING FOR INPUT"
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
     st.session_state.cancelled = False
-    # containers
+
+    # Containers
     st.session_state.improved_question_container = None
     st.session_state.query_container = None
     st.session_state.query_history_container = None
@@ -27,7 +40,8 @@ if 'initialized' not in st.session_state:
     st.session_state.kb_container = None
     st.session_state.answer_container = None
     st.session_state.scored_checklist_container = None
-    
+    st.session_state.debug_container = None
+
     # Initialize settings
     st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
     st.session_state.checklist_model = OpenAIModel.GPT4O.value["name"]
@@ -136,13 +150,10 @@ def output_debug_info(output_data):
 
 def output_values(output_data):
     print("output_values", output_data)
+
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
-            print("****************************")
-            print("improved_question", output_data["improved_question"])
-            print("container type", type(st.session_state.improved_question_container))
-            print("****************************")
             st.write(output_data["improved_question"])
     
     with st.session_state.query_container:
@@ -304,64 +315,6 @@ with st.sidebar:
 
 left_col, search_col, kb_col, answer_col, score_col = st.columns([1, 2, 2, 2, 2])
 
-# Left column - Header, title, question input, and process updates
-with left_col:
-    # Custom logo and header
-    st.markdown("""
-        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-            <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
-            <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
-        </div>
-    """, unsafe_allow_html=True)
-    st.subheader("Your AI Assistant for Verified Explanations")
-    st.markdown("---")
-
-    # Buttons for new conversation and cancel
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("New Conversation"):
-            st.session_state.current_question = ""
-            st.session_state.status_messages = []
-            st.session_state.current_values = {}
-            st.session_state.values_history = []
-            st.session_state.last_question = ""
-            st.session_state.processing_status = "WAITING FOR INPUT"
-            st.session_state.generating_answer = False
-            st.session_state.should_rerun = True
-            st.session_state.cancelled = False
-            st.experimental_rerun()
-    with col2:
-        if st.button("Cancel"):
-            st.session_state.cancelled = True
-            st.session_state.processing_status = "CANCELLING"
-            st.session_state.generating_answer = False
-            st.write("Cancelled")
-            update_status_messages("Cancelled by user")
-            output_values(st.session_state.current_values)
-            #st.experimental_rerun()
-    if st.button("go"):
-        st.write("go2")
-        with st.session_state.improved_question_container:
-            st.write("improved_question")
-        #st.experimental_rerun()
-
-    # Question input
-    question = st.text_input(
-        "What would you like to know?",
-        value=st.session_state.current_question,
-        placeholder="Enter your question here..."
-    )
-    
-    # Store the current question in session state
-    st.session_state.current_question = question
-    
-    # Status messages area
-    st.markdown("### Process Updates")
-    st.session_state.status_container = st.empty()
-    
-    # Display all current status messages
-    output_status_messages()
-
 # Search column - Query and search results
 with search_col:
     st.header("Search")
@@ -401,10 +354,69 @@ with score_col:
     st.markdown("---")
     st.session_state.scored_checklist_container = st.empty()
 
+# Left column last because of dependency on other columns
+with left_col:
+    st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
+            <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
+        </div>
+    """, unsafe_allow_html=True)
+    st.subheader("Your AI Assistant for Verified Explanations")
+    st.markdown("---")
+
+    # Buttons for new conversation and cancel
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("New Conversation"):
+            st.session_state.current_question = ""
+            st.session_state.status_messages = []
+            st.session_state.current_values = {}
+            st.session_state.values_history = []
+            st.session_state.last_question = ""
+            st.session_state.processing_status = "WAITING FOR INPUT"
+            st.session_state.generating_answer = False
+            st.session_state.should_rerun = True
+            st.session_state.cancelled = False
+            st.experimental_rerun()
+    with col2:
+        if st.button("Cancel"):
+            st.session_state.cancelled = True
+            st.session_state.processing_status = "CANCELLING"
+            st.session_state.generating_answer = False
+            st.write("Cancelled")
+            update_status_messages("Cancelled by user")
+            output_values(st.session_state.current_values)
+
+    if st.button("go"):
+        print("go")
+        st.write("go2")
+        with st.session_state.improved_question_container:
+            st.write("improved_question")
+        with st.session_state.debug_container:
+            st.write("debug")
+
+    # Question input
+    question = st.text_input(
+        "What would you like to know?",
+        value=st.session_state.current_question,
+        placeholder="Enter your question here..."
+    )
+    
+    # Store the current question in session state
+    st.session_state.current_question = question
+    
+    # Status messages area
+    st.markdown("### Process Updates")
+    st.session_state.status_container = st.empty()
+    
+    # Display all current status messages
+    output_status_messages()
+
 
 st.header("Debug")
 st.markdown("---")
-if "debug_container" not in st.session_state:
+if st.session_state.debug_container is None:
     st.session_state.debug_container = st.empty()
 
 ### Main processing
