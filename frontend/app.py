@@ -37,8 +37,7 @@ st.set_page_config(
     page_title="RAVE - Recursive Agent for Verified Explanations",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="collapsed",
-    menu_items=None
+    initial_sidebar_state="collapsed"
 )
 
 # Apply dark theme and custom styling
@@ -130,7 +129,7 @@ def output_debug_info(output_data):
         st.json(output_data)
 
 def output_values(output_data):
-
+    print("output_values", output_data)
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
@@ -171,7 +170,7 @@ def output_status_messages():
     with st.session_state.status_container:
         selected_status = st.radio(
             "Process Updates",
-            options=st.session_state.status_messages,
+            options= [message["message"] + " [" + str(message["update_idx"]) + "]" for message in st.session_state.status_messages],
             index=len(st.session_state.status_messages) - 1 if st.session_state.status_messages else 0,
             label_visibility="collapsed",
             key=f"status_container_radio_{len(st.session_state.status_messages)}"
@@ -179,15 +178,16 @@ def output_status_messages():
         
         # If a status is selected, show the corresponding values
         if selected_status:
-            # Extract the index from the selected status (it's already in [n] format)
-            idx = int(selected_status[1:selected_status.index(']')])
+            print("selected_status", selected_status)
+            idx = int(selected_status[selected_status.index("[") + 1:selected_status.index("]")])
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
-                output_debug_info(idx + " " + str(st.session_state.values_history[idx]))
+                output_debug_info(st.session_state.values_history[idx])
 
+# store messages as list of {"update_idx": value_update_idx, "message": message}
 def update_status_messages(message):
-    value_update_idx = len(st.session_state.values_history)
-    message = "[" + str(value_update_idx) + "] " + message
+    update_idx = len(st.session_state.values_history)
+    message = {"update_idx": update_idx, "message": message}
     st.session_state.status_messages.append(message)
     output_status_messages()
 
@@ -356,7 +356,6 @@ with search_col:
     st.markdown("### Improved Question")
     st.session_state.improved_question_container = st.empty()
 
-
     # Current query
     st.markdown("### Current Query")
     st.session_state.query_container = st.empty()
@@ -373,22 +372,19 @@ with search_col:
 with kb_col:
     st.header("Knowledge Base")
     st.markdown("---")
-    if "kb_container" not in st.session_state:
-        st.session_state.kb_container = st.empty()
+    st.session_state.kb_container = st.empty()
 
 # Answer column
 with answer_col:
     st.header("Answer")
     st.markdown("---")
-    if "answer_container" not in st.session_state:
-        st.session_state.answer_container = st.empty()
+    st.session_state.answer_container = st.empty()
 
 # Scorecard column
 with score_col:
     st.header("Scorecard")
     st.markdown("---")
-    if "scored_checklist_container" not in st.session_state:
-        st.session_state.scored_checklist_container = st.empty()
+    st.session_state.scored_checklist_container = st.empty()
 
 
 st.header("Debug")
@@ -420,7 +416,7 @@ if st.session_state.generating_answer:
         unsafe_allow_html=True
     )
 
-# Force rerun if needed
-if st.session_state.should_rerun:
-    st.session_state.should_rerun = False
-    st.experimental_rerun()
+# # Force rerun if needed
+# if st.session_state.should_rerun:
+#     st.session_state.should_rerun = False
+#     st.experimental_rerun()
