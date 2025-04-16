@@ -125,12 +125,6 @@ st.markdown("""
 
 ### Helper functions
 
-def output_history():
-    with st.session_state.history_container:
-        if st.session_state.values_history:
-            st.json(st.session_state.values_history)
-        else:
-            st.text("No history yet")
 
 def output_values(output_data):
     
@@ -167,7 +161,6 @@ def update_values(output_data):
     st.session_state.current_values = output_data
     st.session_state.values_history.append(output_data)
     output_values(output_data)
-    output_history()
 
 def output_status_messages():
     # Display the radio selection with original messages
@@ -176,7 +169,8 @@ def output_status_messages():
             "Process Updates",
             options=st.session_state.status_messages,
             index=len(st.session_state.status_messages) - 1 if st.session_state.status_messages else 0,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key=f"status_container_radio_{len(st.session_state.status_messages)}"
         )
         
         # If a status is selected, show the corresponding values
@@ -185,7 +179,6 @@ def output_status_messages():
             idx = int(selected_status[1:selected_status.index(']')])
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
-                output_history()
 
 def update_status_messages(message):
     value_update_idx = len(st.session_state.values_history)
@@ -294,7 +287,7 @@ with st.sidebar:
         step=0.05
     )
 
-left_col, search_col, kb_col, answer_col, score_col, history_col = st.columns([1, 2, 2, 2, 2, 1])
+left_col, search_col, kb_col, answer_col, score_col = st.columns([1, 2, 2, 2, 2])
 
 # Left column - Header, title, question input, and process updates
 with left_col:
@@ -307,29 +300,31 @@ with left_col:
     """, unsafe_allow_html=True)
     st.subheader("Your AI Assistant for Verified Explanations")
     st.markdown("---")
-    
-    if st.button("Cancel"):
-        st.session_state.cancelled = True
-        st.session_state.processing_status = "CANCELLING"
-        st.session_state.generating_answer = False
-        st.write("Cancelled")
-        update_status_messages("Cancelled by user")
-        output_values(st.session_state.current_values)
-        #st.experimental_rerun()
 
-    # New Conversation button
-    if st.button("New Conversation"):
-        st.session_state.current_question = ""
-        st.session_state.status_messages = []
-        st.session_state.current_values = {}
-        st.session_state.values_history = []
-        st.session_state.last_question = ""
-        st.session_state.processing_status = "WAITING FOR INPUT"
-        st.session_state.generating_answer = False
-        st.session_state.should_rerun = True
-        st.session_state.cancelled = False
-        st.experimental_rerun()
-    
+    # Buttons for new conversation and cancel
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("New Conversation"):
+            st.session_state.current_question = ""
+            st.session_state.status_messages = []
+            st.session_state.current_values = {}
+            st.session_state.values_history = []
+            st.session_state.last_question = ""
+            st.session_state.processing_status = "WAITING FOR INPUT"
+            st.session_state.generating_answer = False
+            st.session_state.should_rerun = True
+            st.session_state.cancelled = False
+            st.experimental_rerun()
+    with col2:
+        if st.button("Cancel"):
+            st.session_state.cancelled = True
+            st.session_state.processing_status = "CANCELLING"
+            st.session_state.generating_answer = False
+            st.write("Cancelled")
+            update_status_messages("Cancelled by user")
+            output_values(st.session_state.current_values)
+            #st.experimental_rerun()
+
     # Question input
     question = st.text_input(
         "What would you like to know?",
@@ -339,10 +334,6 @@ with left_col:
     
     # Store the current question in session state
     st.session_state.current_question = question
-    
-    # Improved question display
-    st.markdown("### Improved Question")
-    st.session_state.improved_question_container = st.empty()
     
     # Status messages area
     st.markdown("### Process Updates")
@@ -355,7 +346,12 @@ with left_col:
 with search_col:
     st.header("Search")
     st.markdown("---")
+
+    # Improved question display
+    st.markdown("### Improved Question")
+    st.session_state.improved_question_container = st.empty()
     
+
     # Current query
     st.markdown("### Current Query")
     if "query_container" not in st.session_state:
@@ -391,14 +387,6 @@ with score_col:
     st.markdown("---")
     if "scored_checklist_container" not in st.session_state:
         st.session_state.scored_checklist_container = st.empty()
-
-# Values History column
-with history_col:
-    st.header("History")
-    st.markdown("---")
-    if "history_container" not in st.session_state:
-        st.session_state.history_container = st.empty()
-
 
 ### Main processing
 

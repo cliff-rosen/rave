@@ -338,12 +338,19 @@ def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, 
         return {"knowledge_base": current_kb}
 
 def should_continue_searching(state: State, config: Dict[str, Any]) -> bool:
-    """Check if we should continue searching based on checklist scores"""
-    if state.get("cancelled", False):
-        return False
+    """Check if we should continue searching based on checklist scores and max iterations"""
         
     checklist = state.get("scored_checklist", [])
     if not checklist:
+        return False
+    
+    # Get current iteration count from query history
+    current_iterations = len(state.get("query_history", []))
+    max_iterations = config["configurable"]["max_iterations"]
+    
+    # Check if we've reached max iterations
+    if current_iterations > max_iterations:
+        print("Max iterations reached")
         return False
     
     # Check if any item has a score less than the threshold
@@ -357,14 +364,6 @@ def is_test_mode(state: State) -> bool:
 # Define the graph
 graph_builder = StateGraph(State)
 
-# def test_node(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
-#     print("TEST_MODE: " + str(TEST_MODE))
-#     writer({"msg": "TEST_MODE: " + str(TEST_MODE)})
-#     return {"improved_question": "new question"}
-
-# graph_builder.add_node("test_node", test_node)
-# graph_builder.add_edge(START, "test_node")
-# 
 
 # Add nodes
 graph_builder.add_node("improve_question", improve_question)
@@ -378,14 +377,6 @@ graph_builder.add_node("score_answer", score_answer)
 # Add edges
 graph_builder.add_edge(START, "improve_question")
 graph_builder.add_edge("improve_question", "generate_scored_checklist")
-# graph_builder.add_conditional_edges(
-#     "improve_question",
-#     is_test_mode,
-#     {
-#         False: "generate_scored_checklist",
-#         True: END
-#     }
-# )
 graph_builder.add_edge("generate_scored_checklist", "generate_query")
 graph_builder.add_edge("generate_query", "search")
 graph_builder.add_edge("search", "update_knowledge_base")
