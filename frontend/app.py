@@ -259,7 +259,8 @@ def agent_process(question):
     # Process with the agent
     for output in graph.stream(initial_state, config=config, stream_mode=["values", "custom"]):
         print("****************************")
-        print("values history[0]", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
+        print("values history[0] at start of output processing", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
+        print("values history[-1] at start of output processing", st.session_state.values_history[-1] if len(st.session_state.values_history) > 0 else "empty")
         if isinstance(output, tuple):
             output_type, output_data = output
             
@@ -270,6 +271,9 @@ def agent_process(question):
             elif output_type == "values":
                 # Update values in the main area
                 update_values(output_data)
+        print("****************************")
+        print("****************************")
+        print("values history[0] at end of output processing", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
 
 
 ### Create layout

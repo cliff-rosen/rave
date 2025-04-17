@@ -145,8 +145,8 @@ def generate_query(state: State, writer: StreamWriter, config: Dict[str, Any]) -
         
         writer({"msg": "Search query generated successfully"})
         return {
-            "query_history": query_history,
-            "current_query": new_query
+            "current_query": new_query,
+            "query_history": query_history
         }
         
     except Exception as e:
@@ -379,7 +379,9 @@ graph_builder.add_node("score_answer", score_answer)
 graph_builder.add_edge(START, "improve_question")
 graph_builder.add_edge("improve_question", "generate_scored_checklist")
 graph_builder.add_edge("generate_scored_checklist", "generate_query")
-graph_builder.add_edge("generate_query", "search")
+#graph_builder.add_edge("generate_query", "search")
+graph_builder.add_edge("generate_query", END)
+
 graph_builder.add_edge("search", "update_knowledge_base")
 graph_builder.add_edge("update_knowledge_base", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
