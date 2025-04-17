@@ -311,7 +311,6 @@ def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, 
         return {}
     
     llm = getModel("kb_model", config)
-    kb_update_prompt = create_kb_update_prompt()
     parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
     
     try:
@@ -323,21 +322,25 @@ def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, 
             writer({"msg": "No new search results to incorporate"})
             return {"knowledge_base": current_kb}
         
+        # Get format instructions and create prompt
+        format_instructions = parser.get_format_instructions()
+        kb_update_prompt = create_kb_update_prompt(format_instructions)
+        
         # Format the prompt with current KB and new search results
+        current_date = datetime.now().strftime("%Y-%m-%d")
         formatted_prompt = kb_update_prompt.format(
             question=state["improved_question"],
             current_kb=json.dumps([nugget.dict() for nugget in current_kb]),
-            search_results=json.dumps(search_results)
+            search_results=json.dumps(search_results),
+            current_date=current_date,
+            format_instructions=format_instructions
         )
         
         # Get LLM's analysis of how to update the KB
         kb_update_response = llm.invoke(formatted_prompt)
         
-        # Debug: Print raw response
-        print("Raw KB update response:", kb_update_response.content)
-        
         try:
-            # Parse the response
+            # Parse the response using Pydantic
             update_data = parser.parse(kb_update_response.content)
             
             # Update the knowledge base

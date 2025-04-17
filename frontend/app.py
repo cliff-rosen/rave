@@ -350,7 +350,6 @@ with left_col:
             st.session_state.generating_answer = False
             st.session_state.should_rerun = True
             st.session_state.cancelled = False
-            st.experimental_rerun()
     with col2:
         if st.button("Cancel"):
             st.session_state.cancelled = True
