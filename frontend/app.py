@@ -325,6 +325,7 @@ def agent_process(question):
                 # Update values in the main area
                 update_values(output_data)
 
+    st.session_state.current_values_idx = len(st.session_state.values_history) - 1
 
 ### Create layout
 
