@@ -383,8 +383,6 @@ with left_col:
             st.write("Cancelled")
             output_values(st.session_state.current_values)
 
-    st.button("Add Status Message", on_click=update_status_messages, args=("New Status Message [1]",))
-
     # Question input
     question = st.text_input(
         "What would you like to know?",
