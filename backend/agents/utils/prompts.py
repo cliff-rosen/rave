@@ -3,6 +3,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import random
+from datetime import datetime
 
 class ChecklistItem(BaseModel):
     item_to_score: str = Field(description="A specific requirement that should be addressed in the answer")
@@ -49,11 +50,13 @@ def create_gap_analyzer_prompt():
 
 def create_query_generator_prompt():
     """Create a prompt for generating search queries"""
+    current_date = datetime.now().strftime("%Y-%m-%d")
     return ChatPromptTemplate.from_messages([
-        ("system", """You are an expert at generating effective search queries.
+        ("system", f"""You are an expert at generating effective search queries.
         Based on the question and checklist requirements, generate a search query that will help find relevant information.
         Consider the query history to avoid repeating similar searches.
         The query should be specific and focused on finding information that will help address the checklist requirements.
+        Current date: {current_date}
         
         Return only the search query text, nothing else."""),
         ("user", """Question: {question}
@@ -75,11 +78,13 @@ def create_response_generator_prompt():
 
 def create_direct_answer_prompt():
     """Create a prompt for generating direct answers"""
+    current_date = datetime.now().strftime("%Y-%m-%d")
     return ChatPromptTemplate.from_messages([
-        ("system", """You are an expert at providing clear and comprehensive answers.
+        ("system", f"""You are an expert at providing clear and comprehensive answers.
         Your task is to generate an answer that addresses all the requirements in the checklist.
         Use the knowledge base to enhance your answer with relevant information.
         Make sure to cite sources when using information from the knowledge base.
+        Current date: {current_date}
         
         For each requirement in the checklist:
         1. Ensure your answer directly addresses it
@@ -130,12 +135,14 @@ def create_scoring_prompt(format_instructions: str):
 
 def create_kb_update_prompt():
     """Create a prompt for updating the knowledge base with new information"""
+    current_date = datetime.now().strftime("%Y-%m-%d")
     parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
     format_instructions = parser.get_format_instructions()
     
     return ChatPromptTemplate.from_messages([
-        ("system", """You are an expert at analyzing and integrating information.
+        ("system", f"""You are an expert at analyzing and integrating information.
         Your task is to update the knowledge base with new information from search results.
+        Current date: {current_date}
         
         For each piece of information:
         1. Compare it with existing knowledge
