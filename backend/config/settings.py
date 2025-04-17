@@ -11,7 +11,7 @@ SCORE_THRESHOLD = 0.9
 IMPROVEMENT_THRESHOLD = 0.05
 
 # Model Configuration
-DEFAULT_MODEL = "gpt-4"
+DEFAULT_MODEL = "gpt-4o-mini"
 FALLBACK_MODEL = "gpt-3.5-turbo"
 
 # Search Configuration

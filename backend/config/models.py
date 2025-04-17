@@ -13,7 +13,8 @@ class OpenAIModel(Enum):
             "Multi-step tasks",
             "Complex problem solving"
         ],
-        "cost_per_1k_tokens": 0.01  # Input
+        "cost_per_1k_tokens": 0.01,  # Input
+        "supports_temperature": False
     }
     
     O1 = {
@@ -24,7 +25,8 @@ class OpenAIModel(Enum):
             "Complex analysis",
             "Advanced problem solving"
         ],
-        "cost_per_1k_tokens": 0.02  # Input
+        "cost_per_1k_tokens": 0.02,  # Input
+        "supports_temperature": False
     }
     
     O1_MINI = {
@@ -35,7 +37,8 @@ class OpenAIModel(Enum):
             "Cost-effective analysis",
             "Quick problem solving"
         ],
-        "cost_per_1k_tokens": 0.015  # Input
+        "cost_per_1k_tokens": 0.015,  # Input
+        "supports_temperature": False
     }
     
     O1_PRO = {
@@ -46,7 +49,8 @@ class OpenAIModel(Enum):
             "High-precision analysis",
             "Complex multi-step tasks"
         ],
-        "cost_per_1k_tokens": 0.03  # Input
+        "cost_per_1k_tokens": 0.03,  # Input
+        "supports_temperature": False
     }
     
     # Flagship Chat Models
@@ -58,7 +62,8 @@ class OpenAIModel(Enum):
             "Advanced reasoning",
             "High-precision responses"
         ],
-        "cost_per_1k_tokens": 0.03  # Input
+        "cost_per_1k_tokens": 0.03,  # Input
+        "supports_temperature": True
     }
     
     GPT4O = {
@@ -69,7 +74,8 @@ class OpenAIModel(Enum):
             "Flexible task handling",
             "General purpose chat"
         ],
-        "cost_per_1k_tokens": 0.02  # Input
+        "cost_per_1k_tokens": 0.02,  # Input
+        "supports_temperature": True
     }
     
     GPT4O_AUDIO = {
@@ -80,7 +86,8 @@ class OpenAIModel(Enum):
             "Voice interactions",
             "Audio processing"
         ],
-        "cost_per_1k_tokens": 0.02  # Input
+        "cost_per_1k_tokens": 0.02,  # Input
+        "supports_temperature": True
     }
     
     CHATGPT4O = {
@@ -91,7 +98,8 @@ class OpenAIModel(Enum):
             "Conversational AI",
             "General purpose chat"
         ],
-        "cost_per_1k_tokens": 0.02  # Input
+        "cost_per_1k_tokens": 0.02,  # Input
+        "supports_temperature": True
     }
     
     # Cost-Optimized Models
@@ -103,7 +111,8 @@ class OpenAIModel(Enum):
             "Cost-effective tasks",
             "General purpose chat"
         ],
-        "cost_per_1k_tokens": 0.015  # Input
+        "cost_per_1k_tokens": 0.015,  # Input
+        "supports_temperature": True
     }
     
     GPT41_NANO = {
@@ -114,7 +123,8 @@ class OpenAIModel(Enum):
             "Most cost-effective",
             "Simple tasks"
         ],
-        "cost_per_1k_tokens": 0.01  # Input
+        "cost_per_1k_tokens": 0.01,  # Input
+        "supports_temperature": True
     }
     
     GPT4O_MINI = {
@@ -125,7 +135,8 @@ class OpenAIModel(Enum):
             "Fast responses",
             "Cost-effective chat"
         ],
-        "cost_per_1k_tokens": 0.01  # Input
+        "cost_per_1k_tokens": 0.01,  # Input
+        "supports_temperature": True
     }
     
     GPT4O_MINI_AUDIO = {
@@ -136,7 +147,8 @@ class OpenAIModel(Enum):
             "Voice interactions",
             "Cost-effective audio processing"
         ],
-        "cost_per_1k_tokens": 0.01  # Input
+        "cost_per_1k_tokens": 0.01,  # Input
+        "supports_temperature": True
     }
     
     # Legacy Models
@@ -149,7 +161,8 @@ class OpenAIModel(Enum):
             "Question improvement",
             "Knowledge verification"
         ],
-        "cost_per_1k_tokens": 0.01  # Input
+        "cost_per_1k_tokens": 0.01,  # Input
+        "supports_temperature": True
     }
     
     GPT4 = {
@@ -160,7 +173,8 @@ class OpenAIModel(Enum):
             "Question improvement",
             "Knowledge verification"
         ],
-        "cost_per_1k_tokens": 0.03  # Input
+        "cost_per_1k_tokens": 0.03,  # Input
+        "supports_temperature": True
     }
     
     GPT4_32K = {
@@ -171,7 +185,8 @@ class OpenAIModel(Enum):
             "Large document processing",
             "Complex multi-step reasoning"
         ],
-        "cost_per_1k_tokens": 0.06  # Input
+        "cost_per_1k_tokens": 0.06,  # Input
+        "supports_temperature": True
     }
     
     # GPT-3.5 Models
@@ -183,7 +198,8 @@ class OpenAIModel(Enum):
             "Initial question processing",
             "Simple reasoning tasks"
         ],
-        "cost_per_1k_tokens": 0.001  # Input
+        "cost_per_1k_tokens": 0.001,  # Input
+        "supports_temperature": True
     }
     
     GPT35_TURBO_INSTRUCT = {
@@ -194,7 +210,8 @@ class OpenAIModel(Enum):
             "Checklist generation",
             "Precise instruction following"
         ],
-        "cost_per_1k_tokens": 0.0015  # Input
+        "cost_per_1k_tokens": 0.0015,  # Input
+        "supports_temperature": True
     }
     
     # Embedding Models
@@ -206,7 +223,8 @@ class OpenAIModel(Enum):
             "Semantic search",
             "Document comparison"
         ],
-        "cost_per_1k_tokens": 0.00002
+        "cost_per_1k_tokens": 0.00002,
+        "supports_temperature": False
     }
     
     EMBEDDING_3_LARGE = {
@@ -217,7 +235,8 @@ class OpenAIModel(Enum):
             "Advanced semantic search",
             "Complex document analysis"
         ],
-        "cost_per_1k_tokens": 0.00013
+        "cost_per_1k_tokens": 0.00013,
+        "supports_temperature": False
     }
 
 # Default model configurations

@@ -27,7 +27,8 @@ from ..config.settings import (
     MAX_SEARCH_RESULTS,
     LOG_LEVEL,
     LOG_FORMAT,
-    TAVILY_API_KEY
+    TAVILY_API_KEY,
+    OPENAI_API_KEY
 )
 
 from .utils.prompts import (
@@ -66,18 +67,54 @@ def validate_state(state: State) -> bool:
         return False
     return True
 
+def getModel(node_name: str, config: Dict[str, Any], writer: StreamWriter = None) -> ChatOpenAI:
+    """Get the appropriate model for a given node.
+    
+    Args:
+        node_name: The name of the node (e.g. 'question_model', 'answer_model')
+        config: The configuration dictionary containing model settings
+        
+    Returns:
+        ChatOpenAI instance configured with the appropriate model
+    """
+    model_name = config["configurable"].get(node_name, DEFAULT_MODEL)
+    if writer:
+        writer({"msg": "Model selected: " + model_name})
+    
+    # Special handling for non-chat models
+    if model_name == "o1-pro":
+        raise ValueError("o1-pro is not a chat model and cannot be used with chat completions")
+    
+    # Get model configuration
+    from ..config.models import get_model_config
+    model_config = get_model_config(model_name)
+    
+    # Create base model configuration
+    chat_config = {
+        "model": model_name,
+        "api_key": OPENAI_API_KEY
+    }
+    
+    # Only add temperature for models that support it
+    if model_config.get("supports_temperature", True):
+        chat_config["temperature"] = 0.0
+    
+    return ChatOpenAI(**chat_config)
+
+
+### Nodes
 def improve_question(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Improve the question for clarity and completeness"""
-    print("improve_question")
+    writer({"msg": "Improving question for clarity and completeness..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["question_model"])
+    llm = getModel("question_model", config, writer)
     improvement_prompt = create_question_improvement_prompt()
     
     try:
-        writer({"msg": "Improving question for clarity and completeness..."})
         formatted_prompt = improvement_prompt.format(question=state["question"])
         improved_question = llm.invoke(formatted_prompt)
         writer({"msg": "Question improved successfully"})
@@ -90,15 +127,16 @@ def improve_question(state: State, writer: StreamWriter, config: Dict[str, Any])
 
 def generate_scored_checklist(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate a checklist of requirements for a well-formed answer"""
+    writer({"msg": "Generating answer requirements checklist..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["checklist_model"])
+    llm = getModel("checklist_model", config, writer)
     parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
     
     try:
-        writer({"msg": "Generating answer requirements checklist..."})
         format_instructions = parser.get_format_instructions()
         checklist_prompt = create_checklist_prompt(format_instructions)
         formatted_prompt = checklist_prompt.format(
@@ -120,15 +158,16 @@ def generate_scored_checklist(state: State, writer: StreamWriter, config: Dict[s
 
 def generate_query(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate a search query based on the question and checklist"""
+    writer({"msg": "Generating search query..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["query_model"])
+    llm = getModel("query_model", config, writer)
     query_generator_prompt = create_query_generator_prompt()
     
     try:
-        writer({"msg": "Generating search query..."})
         formatted_prompt = query_generator_prompt.format(
             question=state["improved_question"],
             checklist=json.dumps(state["scored_checklist"]),
@@ -155,13 +194,13 @@ def generate_query(state: State, writer: StreamWriter, config: Dict[str, Any]) -
 
 def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using the generated query"""
+    writer({"msg": "Performing search..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
     try:
-        writer({"msg": "Performing search..."})
-        
         # Debug: Check API key
         if not TAVILY_API_KEY:
             writer({"msg": "Error: TAVILY_API_KEY not set"})
@@ -178,15 +217,8 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         else:
             writer({"msg": "using current_query: " + current_query})
         
-        
         # Perform the search
         search_results = search.invoke(current_query)
-        # test_query = "Latest news and updates in technology along with their sources and significance"
-        # search_results = search.invoke(test_query)
-        
-        # Debug: Print raw search results
-        # print("Raw search results:", search_results)
-        # print("Type of search results:", type(search_results))
         
         if not search_results:
             writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
@@ -201,15 +233,16 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
 
 def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate an answer to the improved question in markdown format"""
+    writer({"msg": "Generating answer ..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["answer_model"])
+    llm = getModel("answer_model", config)
     answer_prompt = create_direct_answer_prompt()
     
     try:
-        writer({"msg": "Generating answer ..."})
         # Use the improved question if available, otherwise use the original
         question_to_use = state.get("improved_question", state["question"])
         
@@ -236,15 +269,16 @@ def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) 
 
 def score_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Score the answer against the checklist requirements"""
+    writer({"msg": "Scoring answer against requirements..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["scoring_model"])
+    llm = getModel("scoring_model", config)
     parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
     
     try:
-        writer({"msg": "Scoring answer against requirements..."})
         format_instructions = parser.get_format_instructions()
         scoring_prompt = create_scoring_prompt(format_instructions)
         formatted_prompt = scoring_prompt.format(
@@ -269,17 +303,17 @@ def score_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> 
 
 def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Update the knowledge base with new information from search results"""
+    writer({"msg": "Updating knowledge base..."})
+    
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
         return {}
     
-    llm = ChatOpenAI(model=config["configurable"]["kb_model"])
+    llm = getModel("kb_model", config)
     kb_update_prompt = create_kb_update_prompt()
     parser = PydanticOutputParser(pydantic_object=KBUpdateResponse)
     
     try:
-        writer({"msg": "Updating knowledge base..."})
-        
         # Get current knowledge base and search results
         current_kb = state.get("knowledge_base", [])
         search_results = state.get("search_results", [])
@@ -338,11 +372,14 @@ def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, 
         writer({"msg": f"Error updating knowledge base: {str(e)}"})
         return {"knowledge_base": current_kb}
 
-def should_continue_searching(state: State, config: Dict[str, Any]) -> bool:
+### Conditions
+def should_continue_searching(state: State, config: Dict[str, Any], writer: StreamWriter) -> bool:
     """Check if we should continue searching based on checklist scores and max iterations"""
-        
+    writer({"msg": "Evaluating whether to continue searching..."})
+    
     checklist = state.get("scored_checklist", [])
     if not checklist:
+        writer({"msg": "No checklist available, stopping search"})
         return False
     
     # Get current iteration count from query history
@@ -351,20 +388,24 @@ def should_continue_searching(state: State, config: Dict[str, Any]) -> bool:
     
     # Check if we've reached max iterations
     if current_iterations >= max_iterations:
-        print("Max iterations reached")
+        writer({"msg": f"Reached maximum iterations ({max_iterations}), stopping search"})
         return False
     
     # Check if any item has a score less than the threshold
-    return any(item.get("current_score", 0) < config["configurable"]["score_threshold"] for item in checklist)
+    score_threshold = config["configurable"]["score_threshold"]
+    low_scores = [item for item in checklist if item.get("current_score", 0) < score_threshold]
+    
+    if low_scores:
+        writer({"msg": f"Found {len(low_scores)} items below threshold ({score_threshold}), continuing search"})
+        return True
+    else:
+        writer({"msg": "All items meet or exceed threshold, stopping search"})
+        return False
 
-TEST_MODE = False
-def is_test_mode(state: State) -> bool:
-    print("TEST_MODE: " + str(TEST_MODE))
-    return {"improve_question": "new question"}
+### Graph
 
 # Define the graph
 graph_builder = StateGraph(State)
-
 
 # Add nodes
 graph_builder.add_node("improve_question", improve_question)
