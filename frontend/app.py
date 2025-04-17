@@ -323,49 +323,10 @@ with st.sidebar:
         step=0.05
     )
 
-left_col, search_col, kb_col, answer_col, score_col = st.columns([1, 2, 2, 2, 2])
+# Create two columns: left for input and right for content
+left_col, right_col = st.columns([1, 2])
 
-# Search column - Query and search results
-with search_col:
-    st.header("Search")
-    st.markdown("---")
-
-    # Improved question display
-    st.markdown("### Improved Question")
-    st.session_state.improved_question_container = st.empty()
-
-    # Current query
-    st.markdown("### Current Query")
-    st.session_state.query_container = st.empty()
-    
-    # Query history
-    st.markdown("### Query History")
-    st.session_state.query_history_container = st.empty()
-    
-    # Search results
-    st.markdown("### Search Results")
-    st.session_state.search_res_container = st.empty()
-
-# Knowledge Base column
-with kb_col:
-    st.header("Knowledge Base")
-    st.markdown("---")
-    st.session_state.kb_container = st.empty()
-
-# Answer column
-with answer_col:
-    st.header("Answer")
-    st.markdown("---")
-    st.session_state.answer_container = st.empty()
-
-# Scorecard column
-with score_col:
-    st.header("Scorecard")
-    st.markdown("---")
-    st.session_state.scored_checklist_container = st.empty()
-
-
-# Left column last because of dependency on other columns
+# Left column for input and controls
 with left_col:
     st.markdown("""
         <div style="display: flex; align-items: center; margin-bottom: 1rem;">
@@ -396,7 +357,6 @@ with left_col:
             st.session_state.processing_status = "CANCELLING"
             st.session_state.generating_answer = False
             st.write("Cancelled")
-            # update_status_messages("Cancelled by user")
             output_values(st.session_state.current_values)
 
     # Question input
@@ -416,6 +376,36 @@ with left_col:
     # Display all current status messages
     output_status_messages()
 
+# Right column with tabs
+with right_col:
+    # Create tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["Search", "Knowledge Base", "Answer", "Scorecard"])
+    
+    # Search tab
+    with tab1:
+        st.markdown("### Improved Question")
+        st.session_state.improved_question_container = st.empty()
+
+        st.markdown("### Current Query")
+        st.session_state.query_container = st.empty()
+        
+        st.markdown("### Query History")
+        st.session_state.query_history_container = st.empty()
+        
+        st.markdown("### Search Results")
+        st.session_state.search_res_container = st.empty()
+    
+    # Knowledge Base tab
+    with tab2:
+        st.session_state.kb_container = st.empty()
+    
+    # Answer tab
+    with tab3:
+        st.session_state.answer_container = st.empty()
+    
+    # Scorecard tab
+    with tab4:
+        st.session_state.scored_checklist_container = st.empty()
 
 st.header("Debug")
 st.markdown("---")
