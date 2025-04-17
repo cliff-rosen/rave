@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, Any, AsyncIterator, List, Optional, Iterator, TypedDict
+from typing import Annotated, Dict, Any, AsyncIterator, List, Optional, Iterator, TypedDict, Callable
 from pydantic import BaseModel, Field
 import logging
 import json
@@ -15,9 +15,9 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import StreamWriter, Send
+
 
 from ..config.settings import (
     DEFAULT_MODEL,
@@ -67,12 +67,13 @@ def validate_state(state: State) -> bool:
         return False
     return True
 
-def getModel(node_name: str, config: Dict[str, Any], writer: StreamWriter = None) -> ChatOpenAI:
+def getModel(node_name: str, config: Dict[str, Any], writer: Optional[Callable] = None) -> ChatOpenAI:
     """Get the appropriate model for a given node.
     
     Args:
         node_name: The name of the node (e.g. 'question_model', 'answer_model')
         config: The configuration dictionary containing model settings
+        writer: Optional callback for writing messages
         
     Returns:
         ChatOpenAI instance configured with the appropriate model
