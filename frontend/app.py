@@ -1,3 +1,10 @@
+import sys
+import os
+
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 import streamlit as st
 from backend.agents.rave_agent import graph
 from backend.config.models import OpenAIModel, get_model_config

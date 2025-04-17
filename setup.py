@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="langchain-project",
+    name="rave",
     version="0.1",
     packages=find_packages(),
     install_requires=[
@@ -9,5 +9,10 @@ setup(
         "langchain-anthropic",
         "langgraph",
         "python-dotenv",
+        "streamlit",
+        "openai",
+        "tavily-python",
     ],
+    package_dir={"": "."},
+    python_requires=">=3.8",
 ) 
