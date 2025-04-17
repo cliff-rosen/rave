@@ -156,6 +156,36 @@ st.markdown("""
         background-color: #3b3b4a !important;
         border-color: rgba(255, 255, 255, 0.2) !important;
     }
+
+    /* Processing animation */
+    .processing-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .processing-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #f25a5a;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -168,9 +198,6 @@ def output_debug_info(output_data):
         st.write(output_data)
 
 def output_values(output_data):
-    print("*"*100)
-    print("output_values", output_data)
-    print("*"*100)
 
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
@@ -234,7 +261,17 @@ def output_status_messages():
                             args=(msg["update_idx"],),
                             use_container_width=True
                         )
-
+                
+                # Show animated status
+                if st.session_state.processing_status == "PROCESSING":
+                    st.markdown("""
+                        <div class="processing-status">
+                            <div class="processing-dot"></div>
+                            <span>Processing...</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.write(st.session_state.processing_status)
 
 # Update functions are reactive by calling output_values which writes to pre-defined containers
 def update_values(output_data):
