@@ -144,11 +144,6 @@ st.markdown("""
 
 ### Helper functions
 
-def output_history(output_data):
-    # first copy the output_data to a new variable
-    with st.session_state.history_container:
-        st.json(output_data)
-
 def output_debug_info(output_data):
     print("****************************")
     print("output_debug_info", output_data)
@@ -195,7 +190,6 @@ def update_history(output_data):
     output_data_copy = copy.deepcopy(output_data)
     st.session_state.values_history.append(output_data_copy)
     print("update_history after update", st.session_state.values_history)
-    output_history(st.session_state.values_history)
 
 def update_values(output_data):
     st.session_state.current_values = output_data
@@ -230,7 +224,6 @@ def update_status_messages(message):
     message = {"update_idx": update_idx, "message": message}
     st.session_state.status_messages.append(message)
     output_status_messages()
-    output_history(st.session_state.values_history)
 
 def agent_process(question):
     initial_state = {
@@ -336,7 +329,7 @@ with st.sidebar:
         step=0.05
     )
 
-left_col, search_col, kb_col, answer_col, score_col, history_col = st.columns([1, 2, 2, 2, 2, 2])
+left_col, search_col, kb_col, answer_col, score_col = st.columns([1, 2, 2, 2, 2])
 
 # Search column - Query and search results
 with search_col:
@@ -377,10 +370,6 @@ with score_col:
     st.markdown("---")
     st.session_state.scored_checklist_container = st.empty()
 
-with history_col:
-    st.header("History")
-    st.markdown("---")
-    st.session_state.history_container = st.empty()
 
 # Left column last because of dependency on other columns
 with left_col:
@@ -415,15 +404,6 @@ with left_col:
             st.write("Cancelled")
             # update_status_messages("Cancelled by user")
             output_values(st.session_state.current_values)
-            output_history(st.session_state.values_history)
-
-    if st.button("go"):
-        print("go")
-        st.write("go2")
-        with st.session_state.improved_question_container:
-            st.write("improved_question")
-        with st.session_state.debug_container:
-            st.write("debug")
 
     # Question input
     question = st.text_input(
