@@ -1,50 +1,50 @@
 import streamlit as st
 
-st.title("App 2")
-st.write("Hello, World!")
-st.button("Reset")
-
-if "initialized" not in st.session_state:
+if 'initialized' not in st.session_state:
     st.session_state.initialized = True
-    st.session_state.status = "starting"
-    st.session_state.count = 0
-    st.session_state.f1_enabled = False
+    st.session_state.status_messages = []
 
-def set_f1_enabled(value):
-    st.session_state.f1_enabled = value
+def output_values_for_selected_status(idx):
+    print("output_values_for_selected_status", idx)
 
-st.checkbox("Enable 1", key="f1_enabled")
+def output_status_messages():
+    print("output_status_messages", st.session_state.status_messages)
+    # Display status messages in a table format
+    if not st.session_state.status_messages:
+        return
 
-st.markdown("---")
+    with st.session_state.status_area:
+        st.empty()
+        message_container = st.container()
+        with message_container:
+                for msg in st.session_state.status_messages:
+                    st.button(
+                        label=msg["message"],                          # what the user sees
+                        key=f"msg_{msg['update_idx']}.{msg['message']}",                # add unique key
+                        on_click=output_values_for_selected_status,
+                        args=(msg["update_idx"],)                      # tuple of positional args
+                    )
 
-if st.button("Update 1"):
-    with st.session_state.container_1:
-        st.write("C1")
+def update_status_messages(message_text):
+    update_idx = len(st.session_state.status_messages) - 1
+    message = {"update_idx": update_idx, "message": message_text}
+    st.session_state.status_messages.append(message)
+    # output_status_messages()
 
-st.markdown("---")
+st.write("Hello")
 
-st.write("container_1: ")
-if not st.session_state.f1_enabled:
-    st.write("container 1 here:")
-    st.session_state.container_1 = st.empty()
+st.button("Add Status Message", on_click=update_status_messages, args=("New Status Message [1]",))
 
-st.markdown("---")
+st.session_state.status_area = st.empty()
+output_status_messages()
 
-st.write("container_2: ")
-st.write("container 2 here:")
-st.session_state.container_2 = st.empty()
+# if st.session_state.status_messages:
+#     for msg in st.session_state.status_messages:
+#         st.button(
+#             label=msg["message"],                          # what the user sees
+#             key=f"msg_{msg['update_idx']}.{msg['message']}",                # add unique key
+#             on_click=output_values_for_selected_status,
+#             args=(msg["update_idx"],)                      # tuple of positional args
+#         )
 
-st.markdown("---")
 
-if st.button("Update 2"):
-    st.write("clicked here")
-    with st.session_state.container_2:
-        st.write("C2")
-
-st.markdown("---")
-
-st.write("OUTPUT")
-if st.session_state.initialized:
-    st.write("Status: ", st.session_state.status)
-    st.write("Count: ", st.session_state.count)
-    st.write("f1_enabled: ", st.session_state.f1_enabled)

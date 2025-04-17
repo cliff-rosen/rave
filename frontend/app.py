@@ -1,6 +1,6 @@
 import sys
 import os
-
+import random
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -11,6 +11,7 @@ from backend.config.models import OpenAIModel, get_model_config
 import time
 import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
+import pandas as pd
 
 
 ### Initialize session state variables
@@ -19,18 +20,11 @@ if 'initialized' not in st.session_state:
     st.session_state.initialized = True
 
     # State
-    st.session_state.current_question = ""
-    st.session_state.improved_question = ""
-    st.session_state.current_query = ""
-    st.session_state.query_history = []
-    st.session_state.search_results = []
-    st.session_state.knowledge_base = []
-    st.session_state.answer = ""
-    st.session_state.scored_checklist = []
-    st.session_state.status_messages = []
-    st.session_state.current_values = {}
-    st.session_state.values_history = []
-    st.session_state.last_question = ""
+    st.session_state.current_question = ""  # gathered from user
+    st.session_state.status_messages = []  # messages from the agent
+    st.session_state.current_values = {}  # current values of the agent 
+    st.session_state.values_history = []  # history of values
+    st.session_state.current_values_idx = 0
 
     # Processing status
     st.session_state.processing_status = "WAITING FOR INPUT"
@@ -144,18 +138,39 @@ st.markdown("""
         border: none;
         font-weight: bold;
     }
+
+    /* Status message buttons */
+    .status-message-button {
+        background-color: #2b2b3a !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #cccccc !important;
+        font-weight: normal !important;
+        text-align: left !important;
+        padding: 0.5rem 1rem !important;
+        margin: 0.25rem 0 !important;
+        border-radius: 0.25rem !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .status-message-button:hover {
+        background-color: #3b3b4a !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 
 ### Helper functions
 
+# All output functions write to pre-defined containers
 def output_debug_info(output_data):
     with st.session_state.debug_container:
-        st.json(output_data)
+        st.write(output_data)
 
 def output_values(output_data):
-    # print("output_values", output_data)
+    print("*"*100)
+    print("output_values", output_data)
+    print("*"*100)
 
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
@@ -187,39 +202,51 @@ def output_values(output_data):
         if "scored_checklist" in output_data:
             st.json({"scored_checklist": output_data["scored_checklist"]})
 
-def update_history(output_data):
-    output_data_copy = copy.deepcopy(output_data)
-    st.session_state.values_history.append(output_data_copy)
+def output_currently_selected_values():
+    if st.session_state.current_values_idx is not None and 0 <= st.session_state.current_values_idx < len(st.session_state.values_history):
+        idx = st.session_state.current_values_idx
+        output_debug_info(st.session_state.values_history[idx])
+        output_values(st.session_state.values_history[idx])
 
-def update_values(output_data):
-    st.session_state.current_values = output_data
-    update_history(output_data)
-    output_values(output_data)
+def output_values_for_selected_status(idx):
+    st.session_state.current_values_idx = idx
+    output_debug_info(idx)
+
+    if 0 <= idx < len(st.session_state.values_history):
+        output_values(st.session_state.values_history[idx])
+    else:
+        print("selected_status index out of range", idx)
 
 def output_status_messages():
-    # Display the radio selection with original messages
+    # Display status messages in a table format
     with st.session_state.status_container:
-        selected_status = st.radio(
-            "Process Updates",
-            options= [message["message"] + " [" + str(message["update_idx"]) + "]" for message in st.session_state.status_messages],
-            index=len(st.session_state.status_messages) - 1 if st.session_state.status_messages else 0,
-            label_visibility="collapsed",
-            key=f"status_container_radio_{len(st.session_state.status_messages)}"
-        )
-        
-        # If a status is selected, show the corresponding values
-        if selected_status:
-            print("selected_status", selected_status)
-            idx = int(selected_status[selected_status.index("[") + 1:selected_status.index("]")])
-            if 0 <= idx < len(st.session_state.values_history):
-                output_values(st.session_state.values_history[idx])
-            else:
-                print("selected_status index out of range", idx)
+        st.empty()
+        message_container = st.container()
+        with message_container:
+            if st.session_state.status_messages:
+                for msg in st.session_state.status_messages:
+                    # Use expander for each message
+                    with st.expander(msg["message"], expanded=False):
+                        st.button(
+                            label="View Details",
+                            key=f"msg_{msg['update_idx']}.{random.randint(0, 1000000)}",
+                            on_click=output_values_for_selected_status,
+                            args=(msg["update_idx"],),
+                            use_container_width=True
+                        )
+
+
+# Update functions are reactive by calling output_values which writes to pre-defined containers
+def update_values(output_data):
+    output_data_copy = copy.deepcopy(output_data)
+    st.session_state.current_values = output_data_copy
+    st.session_state.values_history.append(output_data_copy)
+    output_values(output_data_copy)
 
 # store messages as list of {"update_idx": value_update_idx, "message": message}
-def update_status_messages(message):
-    update_idx = len(st.session_state.values_history)
-    message = {"update_idx": update_idx, "message": message}
+def update_status_messages(message_text):
+    update_idx = len(st.session_state.values_history) - 1
+    message = {"update_idx": update_idx, "message": message_text}
     st.session_state.status_messages.append(message)
     output_status_messages()
 
@@ -227,13 +254,12 @@ def agent_process(question):
     initial_state = {
         "messages": [],
         "question": question,
-        "improved_question": None,
+        "scored_checklist": [],
         "current_query": None,
         "query_history": [],
         "search_results": [],
-        "scored_checklist": [],
+        "knowledge_base": [],
         "answer": None,
-        "knowledge_base": []
     }
 
     # Create config with model settings
@@ -345,7 +371,6 @@ with left_col:
             st.session_state.status_messages = []
             st.session_state.current_values = {}
             st.session_state.values_history = []
-            st.session_state.last_question = ""
             st.session_state.processing_status = "WAITING FOR INPUT"
             st.session_state.generating_answer = False
             st.session_state.should_rerun = True
@@ -357,6 +382,8 @@ with left_col:
             st.session_state.generating_answer = False
             st.write("Cancelled")
             output_values(st.session_state.current_values)
+
+    st.button("Add Status Message", on_click=update_status_messages, args=("New Status Message [1]",))
 
     # Question input
     question = st.text_input(
@@ -435,7 +462,4 @@ if st.session_state.generating_answer:
         unsafe_allow_html=True
     )
 
-# # Force rerun if needed
-# if st.session_state.should_rerun:
-#     st.session_state.should_rerun = False
-#     st.experimental_rerun()
+output_currently_selected_values()
