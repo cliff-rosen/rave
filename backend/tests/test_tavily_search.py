@@ -1,6 +1,8 @@
 from langchain_community.tools.tavily_search import TavilySearchResults
 from backend.config.settings import TAVILY_API_KEY, MAX_SEARCH_RESULTS
 
+# python -m backend.tests.test_tavily_search
+
 def test_tavily_search():
     print("\n=== Testing Tavily Search ===")
     print(f"Using API Key: {TAVILY_API_KEY[:5]}...{TAVILY_API_KEY[-5:]}")

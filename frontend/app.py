@@ -181,11 +181,8 @@ def output_values(output_data):
             st.json({"scored_checklist": output_data["scored_checklist"]})
 
 def update_history(output_data):
-    print("update_history before update", st.session_state.values_history)
-    # first copy the output_data to a new variable
     output_data_copy = copy.deepcopy(output_data)
     st.session_state.values_history.append(output_data_copy)
-    print("update_history after update", st.session_state.values_history)
 
 def update_values(output_data):
     st.session_state.current_values = output_data
