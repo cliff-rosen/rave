@@ -3,7 +3,7 @@ from backend.agents.rave_agent import graph
 from backend.config.models import OpenAIModel, get_model_config
 from dotenv import load_dotenv
 import time
-
+import copy
 # Load environment variables
 load_dotenv()
 
@@ -145,6 +145,7 @@ st.markdown("""
 ### Helper functions
 
 def output_history(output_data):
+    # first copy the output_data to a new variable
     with st.session_state.history_container:
         st.json(output_data)
 
@@ -190,7 +191,9 @@ def output_values(output_data):
 
 def update_history(output_data):
     print("update_history before update", st.session_state.values_history)
-    st.session_state.values_history.append(output_data)
+    # first copy the output_data to a new variable
+    output_data_copy = copy.deepcopy(output_data)
+    st.session_state.values_history.append(output_data_copy)
     print("update_history after update", st.session_state.values_history)
     output_history(st.session_state.values_history)
 
@@ -263,16 +266,13 @@ def agent_process(question):
         print("values history[-1] at start of output processing", st.session_state.values_history[-1] if len(st.session_state.values_history) > 0 else "empty")
         if isinstance(output, tuple):
             output_type, output_data = output
-            
             if output_type == "custom":
                 # Add new status message
                 update_status_messages(output_data.get("msg", ""))
-            
+
             elif output_type == "values":
                 # Update values in the main area
                 update_values(output_data)
-        print("****************************")
-        print("****************************")
         print("values history[0] at end of output processing", st.session_state.values_history[0] if len(st.session_state.values_history) > 0 else "empty")
 
 

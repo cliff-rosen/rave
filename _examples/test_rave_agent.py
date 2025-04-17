@@ -11,19 +11,36 @@ from backend.agents.rave_agent import (
 )
 
 def main():
-    initial_state: State = {
+    initial_state = {
         "messages": [],
-        "question": "What is the capital of France?",
-        "answer": "",
+        "question": "What is business?",
         "improved_question": None,
+        "current_query": None,
+        "query_history": [],
+        "search_results": [],
         "scored_checklist": [],
+        "answer": None,
         "knowledge_base": []
     }
-    
+
+    config = {
+        "configurable": {
+            "question_model": "gpt-4o-mini",
+            "checklist_model": "gpt-4o-mini",
+            "query_model": "gpt-4o-mini",
+            "answer_model": "gpt-4o-mini",
+            "scoring_model": "gpt-4o-mini",
+            "kb_model": "gpt-4o-mini",
+            "max_iterations": 2,
+            "score_threshold": 0.5
+        }
+    }
+
+
     print("Starting agent...")
     
     try:
-        for chunk in graph.stream(initial_state, stream_mode=["values", "custom"]):
+        for chunk in graph.stream(initial_state, config=config, stream_mode=["values", "custom"]):
             print("Stream data:", chunk)
 
     except Exception as e:
