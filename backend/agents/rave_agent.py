@@ -21,7 +21,7 @@ from langgraph.types import StreamWriter, Send
 
 from ..config.settings import (
     DEFAULT_MODEL,
-    MAX_ITERATIONS,
+    MAX_ITERATIONS,  
     SCORE_THRESHOLD,
     IMPROVEMENT_THRESHOLD,
     MAX_SEARCH_RESULTS,

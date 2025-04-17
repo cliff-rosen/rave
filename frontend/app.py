@@ -1,11 +1,10 @@
 import streamlit as st
 from backend.agents.rave_agent import graph
 from backend.config.models import OpenAIModel, get_model_config
-from dotenv import load_dotenv
 import time
 import copy
-# Load environment variables
-load_dotenv()
+from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
+
 
 ### Initialize session state variables
 if 'initialized' not in st.session_state:
@@ -145,9 +144,6 @@ st.markdown("""
 ### Helper functions
 
 def output_debug_info(output_data):
-    print("****************************")
-    print("output_debug_info", output_data)
-    print("****************************")
     with st.session_state.debug_container:
         st.json(output_data)
 
@@ -213,10 +209,8 @@ def output_status_messages():
             idx = int(selected_status[selected_status.index("[") + 1:selected_status.index("]")])
             if 0 <= idx < len(st.session_state.values_history):
                 output_values(st.session_state.values_history[idx])
-                output_debug_info(st.session_state.values_history[idx])
             else:
                 print("selected_status index out of range", idx)
-                output_debug_info(st.session_state.values_history[0])
 
 # store messages as list of {"update_idx": value_update_idx, "message": message}
 def update_status_messages(message):
@@ -427,6 +421,9 @@ st.header("Debug")
 st.markdown("---")
 if st.session_state.debug_container is None:
     st.session_state.debug_container = st.empty()
+st.write("secret x:", st.secrets["x"])
+st.write("OPENAI_API_KEY:", OPENAI_API_KEY)
+st.write("TAVILY_API_KEY:", TAVILY_API_KEY)
 
 ### Main processing
 

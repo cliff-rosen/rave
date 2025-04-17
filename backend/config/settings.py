@@ -1,12 +1,9 @@
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+import streamlit as st
 
 # API Keys and Authentication
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 
 # Agent Configuration
 MAX_ITERATIONS = 3
