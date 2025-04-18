@@ -16,6 +16,8 @@ import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
 import pandas as pd
 
+VERSION = "0.1.2"
+
 # Session management functions
 def save_session():
     """Save current session to a file"""
@@ -154,8 +156,6 @@ def delete_session(filename):
     except Exception as e:
         st.error(f"Error deleting session: {str(e)}")
         return False
-
-VERSION = "0.1.1"
 
 class ProcessStatus(Enum):
     WAITING_FOR_INPUT = "WAITING FOR INPUT"
