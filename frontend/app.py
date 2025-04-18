@@ -19,65 +19,109 @@ import pandas as pd
 # Session management functions
 def save_session():
     """Save current session to a file"""
-    # Create a serializable copy of the session data
-    session_data = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        "question": st.session_state.current_question,
-        "status_messages": st.session_state.status_messages,
-        "values_history": [
-            {
-                k: v.dict() if hasattr(v, 'dict') else v 
-                for k, v in value.items()
-            } 
-            for value in st.session_state.values_history
-        ],
-        "values_history_description": st.session_state.values_history_description,
-        "current_values_idx": st.session_state.current_values_idx,
-        "processing_status": st.session_state.processing_status,
-        "processing_status_message": st.session_state.processing_status_message,
-        "model_settings": {
-            "question_model": st.session_state.question_model,
-            "checklist_model": st.session_state.checklist_model,
-            "query_model": st.session_state.query_model,
-            "answer_model": st.session_state.answer_model,
-            "scoring_model": st.session_state.scoring_model,
-            "kb_model": st.session_state.kb_model,
-            "max_iterations": st.session_state.max_iterations,
-            "score_threshold": st.session_state.score_threshold
+    try:
+        # Create a serializable copy of the session data
+        
+        # Convert the KnowledgeNugget objects to dictionaries
+        serializable_values_history = []
+        for values_entry in st.session_state.values_history:
+            # Create a copy of the entry to avoid modifying the original
+            entry_copy = values_entry.copy()
+            
+            # Handle knowledge_base if it exists
+            if "knowledge_base" in entry_copy:
+                knowledge_base = entry_copy["knowledge_base"]
+                serializable_knowledge_base = []
+                for nugget in knowledge_base:
+                    try:
+                        # Convert Pydantic model to dict using model_dump()
+                        nugget_dict = nugget.model_dump()
+                        serializable_knowledge_base.append(nugget_dict)
+                    except Exception as e:
+                        print(f"Error serializing nugget: {e}")
+                        continue
+                entry_copy["knowledge_base"] = serializable_knowledge_base
+            
+            serializable_values_history.append(entry_copy)
+
+        session_data = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+            "question": st.session_state.current_question,
+            "status_messages": st.session_state.status_messages,
+            "values_history": serializable_values_history,
+            "values_history_description": st.session_state.values_history_description,
+            "current_values_idx": st.session_state.current_values_idx,
+            "processing_status": st.session_state.processing_status,
+            "processing_status_message": st.session_state.processing_status_message,
+            "model_settings": {
+                "question_model": st.session_state.question_model,
+                "checklist_model": st.session_state.checklist_model,
+                "query_model": st.session_state.query_model,
+                "answer_model": st.session_state.answer_model,
+                "scoring_model": st.session_state.scoring_model,
+                "kb_model": st.session_state.kb_model,
+                "max_iterations": st.session_state.max_iterations,
+                "score_threshold": st.session_state.score_threshold
+            }
         }
-    }
-    
-    # Create sessions directory if it doesn't exist
-    os.makedirs("sessions", exist_ok=True)
-    
-    # Save to file
-    filename = f"sessions/session_{session_data['timestamp']}.json"
-    with open(filename, "w") as f:
-        json.dump(session_data, f, indent=2)
-    
-    return filename
+        
+        # Create sessions directory if it doesn't exist
+        os.makedirs("sessions", exist_ok=True)
+        
+        # Save to file with proper error handling
+        filename = f"sessions/session_{session_data['timestamp']}.json"
+        temp_filename = f"{filename}.tmp"
+        
+        # First write to a temporary file
+        with open(temp_filename, "w") as f:
+            json.dump(session_data, f, indent=2)
+        
+        # Verify the temporary file is valid JSON
+        with open(temp_filename, "r") as f:
+            json.load(f)  # This will raise an error if the JSON is invalid
+        
+        # If we get here, the JSON is valid, so we can rename the temp file
+        if os.path.exists(filename):
+            os.remove(filename)
+        os.rename(temp_filename, filename)
+        
+        return filename
+    except Exception as e:
+        print(f"Error saving session: {e}")
+        # Clean up temporary file if it exists
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+        raise
 
 def load_session(filename):
     """Load a session from file"""
     try:
+        print("loading session", filename)
         with open(filename, "r") as f:
             session_data = json.load(f)
-        
+        print("session_data question", session_data["question"])
+
         # Restore session state
         st.session_state.current_question = session_data["question"]
         st.session_state.status_messages = session_data["status_messages"]
         
-        # Convert dict back to KnowledgeNugget objects if needed
+        # Convert serialized knowledge_base back to KnowledgeNugget objects
         values_history = []
         for value in session_data["values_history"]:
-            processed_value = {}
-            for k, v in value.items():
-                if isinstance(v, dict) and "nugget_id" in v:  # Check if it's a KnowledgeNugget
+            # Create a copy of the value to avoid modifying the original
+            value_copy = value.copy()
+            
+            # Handle knowledge_base if it exists
+            if "knowledge_base" in value_copy:
+                knowledge_base = value_copy["knowledge_base"]
+                reconstructed_knowledge_base = []
+                for nugget_dict in knowledge_base:
+                    # Reconstruct KnowledgeNugget using model_validate
                     from backend.agents.utils.prompts import KnowledgeNugget
-                    processed_value[k] = KnowledgeNugget(**v)
-                else:
-                    processed_value[k] = v
-            values_history.append(processed_value)
+                    reconstructed_knowledge_base.append(KnowledgeNugget.model_validate(nugget_dict))
+                value_copy["knowledge_base"] = reconstructed_knowledge_base
+            
+            values_history.append(value_copy)
         
         st.session_state.values_history = values_history
         st.session_state.values_history_description = session_data["values_history_description"]
@@ -98,6 +142,7 @@ def load_session(filename):
         
         return True
     except Exception as e:
+        print("error loading session", e)
         st.error(f"Error loading session: {str(e)}")
         return False
 
@@ -439,7 +484,7 @@ def output_status_message_area():
 
 # Update functions are reactive by calling output_values which writes to pre-defined containers
 def update_values(output_data):
-    print("update_values", output_data)
+    # print("update_values", output_data)
     output_data_copy = copy.deepcopy(output_data)
     description = ""
     if len(st.session_state.status_messages) > 0:
