@@ -198,7 +198,8 @@ def output_debug_info(output_data):
         st.write(output_data)
 
 def output_values(output_data):
-
+    output_debug_info(output_data)
+    
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
@@ -226,8 +227,28 @@ def output_values(output_data):
             st.markdown(output_data["answer"])
     
     with st.session_state.scored_checklist_container:
-        if "scored_checklist" in output_data:
-            st.json({"scored_checklist": output_data["scored_checklist"]})
+        if "scored_checklist" in output_data and output_data["scored_checklist"]:
+            scorecard_container = st.container()
+            with scorecard_container:
+                # Calculate average score
+                total_score = 0
+                for item in output_data["scored_checklist"]:
+                    total_score += item.get("current_score", 0)
+                avg_score = total_score / len(output_data["scored_checklist"])
+                
+                # Display average score at the top
+                st.markdown(f"### Overall Score: {avg_score:.2f}")
+                st.progress(avg_score)
+                st.markdown("---")
+                
+                # Display individual items in two columns
+                for item in output_data["scored_checklist"]:
+                    score = item.get("current_score", 0)
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(item.get("item_to_score", ""))
+                    with col2:
+                        st.progress(score)
 
 def output_currently_selected_values():
     if st.session_state.current_values_idx is not None and 0 <= st.session_state.current_values_idx < len(st.session_state.values_history):
@@ -248,7 +269,7 @@ def output_status_messages():
     # Display status messages in a table format
     with st.session_state.status_container:
         st.empty()
-        message_container = st.container()
+        message_container = st.container(height=800)
         with message_container:
             if st.session_state.status_messages:
                 for msg in st.session_state.status_messages:
@@ -488,6 +509,8 @@ if question and st.session_state.processing_status == "WAITING FOR INPUT":
 
     st.session_state.generating_answer = False
     st.session_state.processing_status = "COMPLETED"
+
+    output_status_messages()
     # st.rerun()
 
 
