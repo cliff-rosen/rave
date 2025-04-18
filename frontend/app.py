@@ -14,6 +14,8 @@ import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
 import pandas as pd
 
+VERSION = "0.1.0"
+
 class ProcessStatus(Enum):
     WAITING_FOR_INPUT = "WAITING FOR INPUT"
     PROCESSING = "PROCESSING"
@@ -398,7 +400,8 @@ def agent_process(question):
 # Settings Sidebar
 with st.sidebar:
     st.title("Settings")
-    
+    st.write(f"Version: {VERSION}")
+
     st.subheader("Model Selection")
     st.session_state.question_model = st.selectbox(
         "Question Improvement Model",
