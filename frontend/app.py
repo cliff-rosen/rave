@@ -310,29 +310,36 @@ def output_status_message_area():
     # Display status messages in a table format
     with st.session_state.values_history_container:
         st.empty()
-        message_container = st.container(height=800)
+        message_container = st.container(height=900)
         with message_container:
-            st.write("STATUS: " + st.session_state.processing_status_message)
-            if st.session_state.values_history_description:
-                for i in range (len(st.session_state.values_history_description)):
-                    with st.expander(st.session_state.values_history_description[i], expanded=False):
-                        st.button(
-                            label="View Details",
-                            key=f"msg_{i}.{random.randint(0, 1000000)}",
-                            on_click=output_values_for_selected_idx,
-                            args=(i,),
-                            use_container_width=True
-                        )
-                
-                if st.session_state.processing_status == ProcessStatus.PROCESSING.value:
-                    st.markdown("""
-                        <div class="processing-status">
-                            <div class="processing-dot"></div>
-                            <span>Processing...</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.write(st.session_state.processing_status)
+            status_container = st.container(height=150)
+            with status_container:
+                st.write("STATUS:")
+                st.write(st.session_state.processing_status_message)
+
+            values_container = st.container(height=700)
+            with values_container:
+                st.write("TIME TRAVEL:")
+                if st.session_state.values_history_description:
+                    for i in range (len(st.session_state.values_history_description)):
+                        with st.expander(st.session_state.values_history_description[i], expanded=False):
+                            st.button(
+                                label="View Details",
+                                key=f"msg_{i}.{random.randint(0, 1000000)}",
+                                on_click=output_values_for_selected_idx,
+                                args=(i,),
+                                use_container_width=True
+                            )
+                    
+                    if st.session_state.processing_status == ProcessStatus.PROCESSING.value:
+                        st.markdown("""
+                            <div class="processing-status">
+                                <div class="processing-dot"></div>
+                                <span>Processing...</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.write(st.session_state.processing_status)
 
 # Update functions are reactive by calling output_values which writes to pre-defined containers
 def update_values(output_data):
@@ -484,7 +491,7 @@ with left_col:
     st.session_state.current_question = question
     
     # Status messages area
-    st.markdown("### Process Updates")
+    # st.markdown("### Process Updates")
     st.session_state.values_history_container = st.empty()
    
 
