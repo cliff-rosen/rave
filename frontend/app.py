@@ -2,6 +2,8 @@ import sys
 import os
 import random
 from enum import Enum
+import json
+from datetime import datetime
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -13,6 +15,100 @@ import time
 import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
 import pandas as pd
+
+# Session management functions
+def save_session():
+    """Save current session to a file"""
+    # Create a serializable copy of the session data
+    session_data = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+        "question": st.session_state.current_question,
+        "status_messages": st.session_state.status_messages,
+        "values_history": [
+            {
+                k: v.dict() if hasattr(v, 'dict') else v 
+                for k, v in value.items()
+            } 
+            for value in st.session_state.values_history
+        ],
+        "values_history_description": st.session_state.values_history_description,
+        "current_values_idx": st.session_state.current_values_idx,
+        "processing_status": st.session_state.processing_status,
+        "processing_status_message": st.session_state.processing_status_message,
+        "model_settings": {
+            "question_model": st.session_state.question_model,
+            "checklist_model": st.session_state.checklist_model,
+            "query_model": st.session_state.query_model,
+            "answer_model": st.session_state.answer_model,
+            "scoring_model": st.session_state.scoring_model,
+            "kb_model": st.session_state.kb_model,
+            "max_iterations": st.session_state.max_iterations,
+            "score_threshold": st.session_state.score_threshold
+        }
+    }
+    
+    # Create sessions directory if it doesn't exist
+    os.makedirs("sessions", exist_ok=True)
+    
+    # Save to file
+    filename = f"sessions/session_{session_data['timestamp']}.json"
+    with open(filename, "w") as f:
+        json.dump(session_data, f, indent=2)
+    
+    return filename
+
+def load_session(filename):
+    """Load a session from file"""
+    try:
+        with open(filename, "r") as f:
+            session_data = json.load(f)
+        
+        # Restore session state
+        st.session_state.current_question = session_data["question"]
+        st.session_state.status_messages = session_data["status_messages"]
+        
+        # Convert dict back to KnowledgeNugget objects if needed
+        values_history = []
+        for value in session_data["values_history"]:
+            processed_value = {}
+            for k, v in value.items():
+                if isinstance(v, dict) and "nugget_id" in v:  # Check if it's a KnowledgeNugget
+                    from backend.agents.utils.prompts import KnowledgeNugget
+                    processed_value[k] = KnowledgeNugget(**v)
+                else:
+                    processed_value[k] = v
+            values_history.append(processed_value)
+        
+        st.session_state.values_history = values_history
+        st.session_state.values_history_description = session_data["values_history_description"]
+        st.session_state.current_values_idx = session_data["current_values_idx"]
+        st.session_state.processing_status = session_data["processing_status"]
+        st.session_state.processing_status_message = session_data["processing_status_message"]
+        
+        # Restore model settings
+        model_settings = session_data["model_settings"]
+        st.session_state.question_model = model_settings["question_model"]
+        st.session_state.checklist_model = model_settings["checklist_model"]
+        st.session_state.query_model = model_settings["query_model"]
+        st.session_state.answer_model = model_settings["answer_model"]
+        st.session_state.scoring_model = model_settings["scoring_model"]
+        st.session_state.kb_model = model_settings["kb_model"]
+        st.session_state.max_iterations = model_settings["max_iterations"]
+        st.session_state.score_threshold = model_settings["score_threshold"]
+        
+        return True
+    except Exception as e:
+        st.error(f"Error loading session: {str(e)}")
+        return False
+
+def delete_session(filename):
+    """Delete a saved session file"""
+    try:
+        os.remove(filename)
+        return True
+    except Exception as e:
+        st.error(f"Error deleting session: {str(e)}")
+        return False
 
 VERSION = "0.1.0"
 
@@ -462,6 +558,37 @@ with st.sidebar:
         value=st.session_state.score_threshold,
         step=0.05
     )
+
+    # Session Management
+    st.markdown("---")
+    st.subheader("Session Management")
+    
+    # Save current session
+    if st.session_state.processing_status == ProcessStatus.COMPLETED.value:
+        if st.button("Save Current Session"):
+            filename = save_session()
+            st.success(f"Session saved to {filename}")
+    
+    # List and load saved sessions
+    st.subheader("Saved Sessions")
+    sessions_dir = "sessions"
+    if os.path.exists(sessions_dir):
+        session_files = sorted([f for f in os.listdir(sessions_dir) if f.endswith(".json")], reverse=True)
+        for session_file in session_files:
+            with st.expander(session_file):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    if st.button("Load Session", key=f"load_{session_file}"):
+                        if load_session(os.path.join(sessions_dir, session_file)):
+                            st.success("Session loaded successfully")
+                            st.rerun()
+                with col2:
+                    if st.button("Delete", key=f"delete_{session_file}"):
+                        if delete_session(os.path.join(sessions_dir, session_file)):
+                            st.success("Session deleted successfully")
+                            st.rerun()
+    else:
+        st.info("No saved sessions found")
 
 # Create two columns: left for input and right for content
 left_col, right_col = st.columns([1, 2])
