@@ -31,11 +31,12 @@ if 'initialized' not in st.session_state:
     st.session_state.status_messages = []  # messages from the agent
     st.session_state.current_values = {}  # current values of the agent 
     st.session_state.values_history = []  # history of values
+    st.session_state.values_history_description = []  # description of the values
     st.session_state.current_values_idx = None
 
     # Processing status
     st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
-    st.session_state.generating_answer = False
+    st.session_state.processing_status_message = "Waiting for input..."
     st.session_state.should_rerun = False
 
     # Initialize containers
@@ -48,7 +49,7 @@ if 'initialized' not in st.session_state:
     st.session_state.answer_container = None
     st.session_state.scored_checklist_container = None
     st.session_state.debug_container = None
-    st.session_state.status_container = None
+    st.session_state.values_history_container = None
 
     # Initialize settings
     st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
@@ -199,19 +200,20 @@ st.markdown("""
 
 def cancel_processing():
     st.session_state.processing_status = ProcessStatus.CANCELED.value
-    st.session_state.generating_answer = False
+    st.session_state.processing_status_message = "Processing canceled"
     output_control_container()
-    output_status_messages()
+    output_status_message_area()
 
 def new_conversation():
     st.session_state.current_question = ""
     st.session_state.status_messages = []
     st.session_state.current_values = {}
     st.session_state.values_history = []
+    st.session_state.values_history_description = []
     st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
-    st.session_state.generating_answer = False
+    st.session_state.processing_status_message = "Waiting for input..."
     output_control_container()
-    output_status_messages()
+    output_status_message_area()
 
 ### Helper functions
 
@@ -226,7 +228,6 @@ def output_control_container():
         control_container = st.container()
         with control_container:
             st.empty()
-            
             if st.session_state.processing_status != ProcessStatus.WAITING_FOR_INPUT.value:
                 st.markdown(st.session_state.current_question)
             
@@ -293,7 +294,8 @@ def output_currently_selected_values():
         output_debug_info(st.session_state.values_history[idx])
         output_values(st.session_state.values_history[idx])
 
-def output_values_for_selected_status(idx):
+# Used by the status message area to output the values for the selected idx
+def output_values_for_selected_idx(idx):
     st.session_state.current_values_idx = idx
     output_debug_info(idx)
 
@@ -302,20 +304,21 @@ def output_values_for_selected_status(idx):
     else:
         print("selected_status index out of range", idx)
 
-def output_status_messages():
+def output_status_message_area():
     # Display status messages in a table format
-    with st.session_state.status_container:
+    with st.session_state.values_history_container:
         st.empty()
         message_container = st.container(height=800)
         with message_container:
-            if st.session_state.status_messages:
-                for msg in st.session_state.status_messages:
-                    with st.expander(msg["message"], expanded=False):
+            st.write("STATUS: " + st.session_state.processing_status_message)
+            if st.session_state.values_history_description:
+                for i in range (len(st.session_state.values_history_description)):
+                    with st.expander(st.session_state.values_history_description[i], expanded=False):
                         st.button(
                             label="View Details",
-                            key=f"msg_{msg['update_idx']}.{random.randint(0, 1000000)}",
-                            on_click=output_values_for_selected_status,
-                            args=(msg["update_idx"],),
+                            key=f"msg_{i}.{random.randint(0, 1000000)}",
+                            on_click=output_values_for_selected_idx,
+                            args=(i,),
                             use_container_width=True
                         )
                 
@@ -333,16 +336,21 @@ def output_status_messages():
 def update_values(output_data):
     print("update_values", output_data)
     output_data_copy = copy.deepcopy(output_data)
+    description = ""
+    if len(st.session_state.status_messages) > 0:
+        description = st.session_state.status_messages[-1]
+    else:
+        description = "Initial values"
     st.session_state.current_values = output_data_copy
     st.session_state.values_history.append(output_data_copy)
+    st.session_state.values_history_description.append(description)
     output_values(output_data_copy)
 
 # store messages as list of {"update_idx": value_update_idx, "message": message}
 def update_status_messages(message_text):
-    update_idx = len(st.session_state.values_history) - 1
-    message = {"update_idx": update_idx, "message": message_text}
-    st.session_state.status_messages.append(message)
-    output_status_messages()
+    st.session_state.status_messages.append(message_text)
+    st.session_state.processing_status_message = message_text
+    output_status_message_area()
 
 def agent_process(question):
     initial_state = {
@@ -450,31 +458,31 @@ left_col, right_col = st.columns([1, 2])
 
 # Left column for input and controls
 with left_col:
+    # Header
     st.markdown("""
         <div style="display: flex; align-items: center; margin-bottom: 1rem;">
             <img src="https://raw.githubusercontent.com/streamlit/streamlit/master/frontend/public/favicon.png" width="40">
-            <h1 style="margin-left: 10px; color: white;">RAVE - Recursive Agent</h1>
+            <h1 style="margin-left: 10px; color: white;">RAVE</h1>
         </div>
     """, unsafe_allow_html=True)
-    st.subheader("Your AI Assistant for Verified Explanations")
+    st.subheader("Your RecursiveAI Assistant for Verified Explanations")
     st.markdown("---")
 
+    # Control container 
     st.session_state.control_container = st.empty()
     output_control_container()
 
-    # Question input
+    # Question input    
     question = st.text_input(
         "What would you like to know?",
         value=st.session_state.current_question,
         placeholder="Enter your question here..."
     )
-    
-    # Store the current question in session state
     st.session_state.current_question = question
     
     # Status messages area
     st.markdown("### Process Updates")
-    st.session_state.status_container = st.empty()
+    st.session_state.values_history_container = st.empty()
    
 
 # Right column with tabs
@@ -520,17 +528,14 @@ if st.session_state.debug_container is None:
 if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_INPUT.value:
     st.session_state.processing_status = ProcessStatus.PROCESSING.value
     output_control_container()
-    st.session_state.generating_answer = True
-    st.session_state.status_messages = []
 
     agent_process(st.session_state.current_question)
 
-    st.session_state.generating_answer = False
     st.session_state.processing_status = ProcessStatus.COMPLETED.value
     output_control_container()
-    output_status_messages()
+    output_status_message_area()
     # st.rerun()
 
 
 output_currently_selected_values()
-output_status_messages()
+output_status_message_area()
