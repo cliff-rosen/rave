@@ -79,8 +79,6 @@ def getModel(node_name: str, config: Dict[str, Any], writer: Optional[Callable] 
         ChatOpenAI instance configured with the appropriate model
     """
     model_name = config["configurable"].get(node_name, DEFAULT_MODEL)
-    if writer:
-        writer({"msg": "Model selected: " + model_name})
     
     # Special handling for non-chat models
     if model_name == "o1-pro":

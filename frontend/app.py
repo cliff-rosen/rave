@@ -324,7 +324,7 @@ def output_status_message_area():
                     for i in range (len(st.session_state.values_history_description)):
                         with st.expander(st.session_state.values_history_description[i], expanded=False):
                             st.button(
-                                label="View Details",
+                                label="view tabs as this time",
                                 key=f"msg_{i}.{random.randint(0, 1000000)}",
                                 on_click=output_values_for_selected_idx,
                                 args=(i,),
