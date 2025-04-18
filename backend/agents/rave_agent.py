@@ -148,7 +148,7 @@ def generate_scored_checklist(state: State, writer: StreamWriter, config: Dict[s
         parsed_response = parser.parse(checklist_response.content)
         checklist_items = [item.dict() for item in parsed_response.items]
         
-        writer({"msg": "Checklist generated successfully"})
+        writer({"msg": "Scorecard generated successfully"})
         return {"scored_checklist": checklist_items}
         
     except Exception as e:

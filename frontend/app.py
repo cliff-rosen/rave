@@ -18,6 +18,13 @@ import pandas as pd
 
 VERSION = "0.1.2"
 
+### Page configuration
+st.set_page_config(
+    page_title="RAVE - Recursive Agent for Verified Explanations",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 # Session management functions
 def save_session():
     """Save current session to a file"""
@@ -141,7 +148,7 @@ def load_session(filename):
         st.session_state.kb_model = model_settings["kb_model"]
         st.session_state.max_iterations = model_settings["max_iterations"]
         st.session_state.score_threshold = model_settings["score_threshold"]
-        
+        print("st.session_state.kb_model", st.session_state.kb_model)
         return True
     except Exception as e:
         print("error loading session", e)
@@ -203,14 +210,6 @@ if 'initialized' not in st.session_state:
     st.session_state.kb_model = OpenAIModel.GPT4O.value["name"]
     st.session_state.max_iterations = 3
     st.session_state.score_threshold = 0.9
-
-### Page configuration
-st.set_page_config(
-    page_title="RAVE - Recursive Agent for Verified Explanations",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
 # Apply dark theme and custom styling
 st.markdown("""
@@ -623,10 +622,13 @@ with st.sidebar:
             with st.expander(session_file):
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    if st.button("Load Session", key=f"load_{session_file}"):
-                        if load_session(os.path.join(sessions_dir, session_file)):
-                            st.success("Session loaded successfully")
-                            st.rerun()
+                    # if st.button("Load Session", key=f"load_{session_file}"):
+                    #     if load_session(os.path.join(sessions_dir, session_file)):
+                    #         st.success("Session loaded successfully")
+                    #         st.rerun()
+                    if st.button("Load Session", key=f"load_{session_file}", on_click=lambda: load_session(os.path.join(sessions_dir, session_file))):
+                        st.success("Session loaded successfully")
+                        st.rerun()
                 with col2:
                     if st.button("Delete", key=f"delete_{session_file}"):
                         if delete_session(os.path.join(sessions_dir, session_file)):
@@ -714,10 +716,13 @@ if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_
     agent_process(st.session_state.current_question)
 
     st.session_state.processing_status = ProcessStatus.COMPLETED.value
+    st.rerun()
     output_control_container()
     output_status_message_area()
-    # st.rerun()
 
 
 output_currently_selected_values()
 output_status_message_area()
+st.write("st.session_state.score_threshold", st.session_state.score_threshold)
+st.write("st.session_state.kb_model", st.session_state.kb_model)
+

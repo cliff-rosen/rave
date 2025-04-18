@@ -1,50 +1,37 @@
 import streamlit as st
+import time
 
 if 'initialized' not in st.session_state:
     st.session_state.initialized = True
     st.session_state.status_messages = []
+    st.session_state.state = 0
+    st.session_state.x = 0
+    st.session_state.message = "hello"
+    st.session_state.message_container = None
+    st.session_state.message_container_2 = None
 
-def output_values_for_selected_status(idx):
-    print("output_values_for_selected_status", idx)
+st.button("refresh")
 
-def output_status_messages():
-    print("output_status_messages", st.session_state.status_messages)
-    # Display status messages in a table format
-    if not st.session_state.status_messages:
-        return
+if st.session_state.x == 0:
+    st.write("button 0")
 
-    with st.session_state.status_area:
-        st.empty()
-        message_container = st.container()
-        with message_container:
-                for msg in st.session_state.status_messages:
-                    st.button(
-                        label=msg["message"],                          # what the user sees
-                        key=f"msg_{msg['update_idx']}.{msg['message']}",                # add unique key
-                        on_click=output_values_for_selected_status,
-                        args=(msg["update_idx"],)                      # tuple of positional args
-                    )
+if st.session_state.x == 1:
+    st.write("button 1")
 
-def update_status_messages(message_text):
-    update_idx = len(st.session_state.status_messages) - 1
-    message = {"update_idx": update_idx, "message": message_text}
-    st.session_state.status_messages.append(message)
-    # output_status_messages()
+st.session_state.message_container = st.empty()
+with st.session_state.message_container:
+    st.write("message: ", st.session_state.message)
 
-st.write("Hello")
+def agent_loop():
+    st.session_state.message = "agent loop 1"
+    for i in range(2):
+        print("agent loop", i)
+        st.session_state.message_container.write("agent loop" + str(i))
+        time.sleep(1)
+    st.session_state.message = "agent loop 2"
+    st.session_state.x = 1
 
-st.button("Add Status Message", on_click=update_status_messages, args=("New Status Message [1]",))
+if st.button("agent loop"):
+    agent_loop()
 
-st.session_state.status_area = st.empty()
-output_status_messages()
-
-# if st.session_state.status_messages:
-#     for msg in st.session_state.status_messages:
-#         st.button(
-#             label=msg["message"],                          # what the user sees
-#             key=f"msg_{msg['update_idx']}.{msg['message']}",                # add unique key
-#             on_click=output_values_for_selected_status,
-#             args=(msg["update_idx"],)                      # tuple of positional args
-#         )
-
-
+st.write("message 2: ", st.session_state.message)
