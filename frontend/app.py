@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+from enum import Enum
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -13,6 +14,12 @@ import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
 import pandas as pd
 
+class ProcessStatus(Enum):
+    WAITING_FOR_INPUT = "WAITING FOR INPUT"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    CANCELED = "CANCELED"
+    ERROR = "ERROR"
 
 ### Initialize session state variables
 if 'initialized' not in st.session_state:
@@ -24,15 +31,15 @@ if 'initialized' not in st.session_state:
     st.session_state.status_messages = []  # messages from the agent
     st.session_state.current_values = {}  # current values of the agent 
     st.session_state.values_history = []  # history of values
-    st.session_state.current_values_idx = 0
+    st.session_state.current_values_idx = None
 
     # Processing status
-    st.session_state.processing_status = "WAITING FOR INPUT"
+    st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
     st.session_state.generating_answer = False
     st.session_state.should_rerun = False
-    st.session_state.cancelled = False
 
-    # Containers
+    # Initialize containers
+    st.session_state.control_container = None
     st.session_state.improved_question_container = None
     st.session_state.query_container = None
     st.session_state.query_history_container = None
@@ -41,6 +48,7 @@ if 'initialized' not in st.session_state:
     st.session_state.answer_container = None
     st.session_state.scored_checklist_container = None
     st.session_state.debug_container = None
+    st.session_state.status_container = None
 
     # Initialize settings
     st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
@@ -189,6 +197,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+def cancel_processing():
+    st.session_state.processing_status = ProcessStatus.CANCELED.value
+    st.session_state.generating_answer = False
+    output_control_container()
+    output_status_messages()
+
+def new_conversation():
+    st.session_state.current_question = ""
+    st.session_state.status_messages = []
+    st.session_state.current_values = {}
+    st.session_state.values_history = []
+    st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
+    st.session_state.generating_answer = False
+    output_control_container()
+    output_status_messages()
 
 ### Helper functions
 
@@ -197,8 +220,23 @@ def output_debug_info(output_data):
     with st.session_state.debug_container:
         st.write(output_data)
 
+def output_control_container():
+    with st.session_state.control_container:
+        st.empty()
+        control_container = st.container()
+        with control_container:
+            st.empty()
+            
+            if st.session_state.processing_status != ProcessStatus.WAITING_FOR_INPUT.value:
+                st.markdown(st.session_state.current_question)
+            
+            if st.session_state.processing_status == ProcessStatus.PROCESSING.value:
+                st.button("Cancel", key=f"cancel_processing", on_click=cancel_processing)
+            
+            if st.session_state.processing_status == ProcessStatus.COMPLETED.value or st.session_state.processing_status == ProcessStatus.CANCELED.value:
+                st.button("New Conversation", key=f"new_conversation_{random.randint(0, 1000000)}", on_click=new_conversation)
+
 def output_values(output_data):
-    output_debug_info(output_data)
     
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
@@ -223,7 +261,6 @@ def output_values(output_data):
     
     with st.session_state.answer_container:
         if "answer" in output_data:
-            # Display answer in markdown format
             st.markdown(output_data["answer"])
     
     with st.session_state.scored_checklist_container:
@@ -273,7 +310,6 @@ def output_status_messages():
         with message_container:
             if st.session_state.status_messages:
                 for msg in st.session_state.status_messages:
-                    # Use expander for each message
                     with st.expander(msg["message"], expanded=False):
                         st.button(
                             label="View Details",
@@ -283,8 +319,7 @@ def output_status_messages():
                             use_container_width=True
                         )
                 
-                # Show animated status
-                if st.session_state.processing_status == "PROCESSING":
+                if st.session_state.processing_status == ProcessStatus.PROCESSING.value:
                     st.markdown("""
                         <div class="processing-status">
                             <div class="processing-dot"></div>
@@ -296,6 +331,7 @@ def output_status_messages():
 
 # Update functions are reactive by calling output_values which writes to pre-defined containers
 def update_values(output_data):
+    print("update_values", output_data)
     output_data_copy = copy.deepcopy(output_data)
     st.session_state.current_values = output_data_copy
     st.session_state.values_history.append(output_data_copy)
@@ -312,6 +348,7 @@ def agent_process(question):
     initial_state = {
         "messages": [],
         "question": question,
+        "improved_question": "",
         "scored_checklist": [],
         "current_query": None,
         "query_history": [],
@@ -422,25 +459,8 @@ with left_col:
     st.subheader("Your AI Assistant for Verified Explanations")
     st.markdown("---")
 
-    # Buttons for new conversation and cancel
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("New Conversation"):
-            st.session_state.current_question = ""
-            st.session_state.status_messages = []
-            st.session_state.current_values = {}
-            st.session_state.values_history = []
-            st.session_state.processing_status = "WAITING FOR INPUT"
-            st.session_state.generating_answer = False
-            st.session_state.should_rerun = True
-            st.session_state.cancelled = False
-    with col2:
-        if st.button("Cancel"):
-            st.session_state.cancelled = True
-            st.session_state.processing_status = "CANCELLING"
-            st.session_state.generating_answer = False
-            st.write("Cancelled")
-            output_values(st.session_state.current_values)
+    st.session_state.control_container = st.empty()
+    output_control_container()
 
     # Question input
     question = st.text_input(
@@ -455,9 +475,7 @@ with left_col:
     # Status messages area
     st.markdown("### Process Updates")
     st.session_state.status_container = st.empty()
-    
-    # Display all current status messages
-    output_status_messages()
+   
 
 # Right column with tabs
 with right_col:
@@ -466,17 +484,17 @@ with right_col:
     
     # Search tab
     with tab1:
-        st.markdown("### Improved Question")
-        st.session_state.improved_question_container = st.empty()
+            st.markdown("### Improved Question")
+            st.session_state.improved_question_container = st.empty()
 
-        st.markdown("### Current Query")
-        st.session_state.query_container = st.empty()
-        
-        st.markdown("### Query History")
-        st.session_state.query_history_container = st.empty()
-        
-        st.markdown("### Search Results")
-        st.session_state.search_res_container = st.empty()
+            st.markdown("### Current Query")
+            st.session_state.query_container = st.empty()
+            
+            st.markdown("### Query History")
+            st.session_state.query_history_container = st.empty()
+            
+            st.markdown("### Search Results")
+            st.session_state.search_res_container = st.empty()
     
     # Knowledge Base tab
     with tab2:
@@ -498,27 +516,20 @@ if st.session_state.debug_container is None:
 ### Main processing
 
 # Set processing state if we have a new question
-if question and st.session_state.processing_status == "WAITING FOR INPUT":
-
-    st.session_state.processing_status = "PROCESSING"
+if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_INPUT.value:
+    st.session_state.processing_status = ProcessStatus.PROCESSING.value
+    output_control_container()
     st.session_state.generating_answer = True
-    st.session_state.cancelled = False
     st.session_state.status_messages = []
 
     agent_process(st.session_state.current_question)
 
     st.session_state.generating_answer = False
-    st.session_state.processing_status = "COMPLETED"
-
+    st.session_state.processing_status = ProcessStatus.COMPLETED.value
+    output_control_container()
     output_status_messages()
     # st.rerun()
 
 
-# Add a status footer for the "Generating answer..." message when needed
-if st.session_state.generating_answer:
-    st.markdown(
-        '<div class="status-footer">Generating answer...</div>', 
-        unsafe_allow_html=True
-    )
-
 output_currently_selected_values()
+output_status_messages()
