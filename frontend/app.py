@@ -237,7 +237,7 @@ def output_control_container():
                 st.button("New Conversation", key=f"new_conversation_{random.randint(0, 1000000)}", on_click=new_conversation)
 
 def output_values(output_data):
-    
+    output_debug_info(output_data)
     # Update all containers with their respective values
     with st.session_state.improved_question_container:
         if "improved_question" in output_data:
@@ -513,6 +513,7 @@ st.markdown("---")
 if st.session_state.debug_container is None:
     st.session_state.debug_container = st.empty()
 
+
 ### Main processing
 
 # Set processing state if we have a new question
@@ -533,4 +534,3 @@ if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_
 
 output_currently_selected_values()
 output_status_messages()
-st.write(st.session_state.processing_status)
