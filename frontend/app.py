@@ -533,3 +533,4 @@ if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_
 
 output_currently_selected_values()
 output_status_messages()
+st.write(st.session_state.processing_status)
