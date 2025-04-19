@@ -148,7 +148,6 @@ def load_session(filename):
         st.session_state.kb_model = model_settings["kb_model"]
         st.session_state.max_iterations = model_settings["max_iterations"]
         st.session_state.score_threshold = model_settings["score_threshold"]
-        print("st.session_state.kb_model", st.session_state.kb_model)
         return True
     except Exception as e:
         print("error loading session", e)
@@ -626,7 +625,7 @@ with st.sidebar:
                     #     if load_session(os.path.join(sessions_dir, session_file)):
                     #         st.success("Session loaded successfully")
                     #         st.rerun()
-                    if st.button("Load Session", key=f"load_{session_file}", on_click=lambda: load_session(os.path.join(sessions_dir, session_file))):
+                    if st.button("Load Session", key=f"load_{session_file}", on_click=lambda session_file=session_file: load_session(os.path.join(sessions_dir, session_file))):
                         st.success("Session loaded successfully")
                         st.rerun()
                 with col2:
