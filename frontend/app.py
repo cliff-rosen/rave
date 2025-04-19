@@ -320,7 +320,7 @@ def output_workflow_visualization():
         
         # Get current stage based on status messages
         current_stage = 0  # Default to first stage
-        if st.session_state.status_messages:
+        if st.session_state.processing_status != ProcessStatus.CANCELED.value and st.session_state.status_messages:
             last_message = st.session_state.status_messages[-1].lower()
             if "improving question" in last_message:
                 current_stage = 1
