@@ -170,175 +170,7 @@ class ProcessStatus(Enum):
     CANCELED = "CANCELED"
     ERROR = "ERROR"
 
-### Initialize session state variables
-if 'initialized' not in st.session_state:
-    # Initialized
-    st.session_state.initialized = True
-
-    # State
-    st.session_state.current_question = ""  # gathered from user
-    st.session_state.status_messages = []  # messages from the agent
-    st.session_state.current_values = {}  # current values of the agent 
-    st.session_state.values_history = []  # history of values
-    st.session_state.values_history_description = []  # description of the values
-    st.session_state.current_values_idx = None
-
-    # Processing status
-    st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
-    st.session_state.processing_status_message = "Waiting for input..."
-    st.session_state.should_rerun = False
-
-    # Initialize containers
-    st.session_state.control_container = None
-    st.session_state.improved_question_container = None
-    st.session_state.query_container = None
-    st.session_state.query_history_container = None
-    st.session_state.search_res_container = None
-    st.session_state.kb_container = None
-    st.session_state.answer_container = None
-    st.session_state.scored_checklist_container = None
-    st.session_state.debug_container = None
-    st.session_state.values_history_container = None
-
-    # Initialize settings
-    st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.checklist_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.query_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.answer_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.scoring_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.kb_model = OpenAIModel.GPT4O.value["name"]
-    st.session_state.max_iterations = 3
-    st.session_state.score_threshold = 0.9
-
-# Apply dark theme and custom styling
-st.markdown("""
-    <style>
-    /* Dark theme */
-    :root {
-        --background-color: #1e1e2e;
-        --text-color: #ffffff;
-        --status-bg-color: #2b2b3a;
-    }
-    
-    .main {
-        background-color: var(--background-color);
-        color: var(--text-color);
-        padding: 1rem;
-    }
-    
-    header {
-        background-color: var(--background-color);
-        visibility: xhidden;
-    }
-    
-    /* Status area styling */
-    .status-message {
-        color: #cccccc;
-        font-style: italic;
-        margin: 0.5rem 0;
-        font-size: 0.9rem;
-    }
-    
-    .status-area {
-        height: 200px;
-        overflow-y: auto;
-        padding: 0.5rem;
-        background-color: var(--status-bg-color);
-        border-radius: 0.25rem;
-        margin-top: 0.5rem;
-    }
-    
-    /* Input styling */
-    .stTextInput > div > div > input {
-        font-size: 1.2rem;
-        background-color: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
-    }
-    
-    /* JSON output styling */
-    .element-container div[data-testid="stJson"] {
-        background-color: #2b2b3a;
-        border-radius: 0.25rem;
-        padding: 1rem;
-    }
-    
-    /* Status footer styling */
-    .status-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        padding: 0.5rem;
-        background-color: #2b2b3a;
-        color: #cccccc;
-        font-style: italic;
-        z-index: 1000;
-    }
-    
-    /* Hide hamburger menu and footer */
-    .stDeployButton, footer, #MainMenu {
-        visibility: xhidden;
-    }
-    
-    /* Custom buttons */
-    .stButton > button {
-        background-color: #f25a5a;
-        color: white;
-        border: none;
-        font-weight: bold;
-    }
-
-    /* Status message buttons */
-    .status-message-button {
-        background-color: #2b2b3a !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #cccccc !important;
-        font-weight: normal !important;
-        text-align: left !important;
-        padding: 0.5rem 1rem !important;
-        margin: 0.25rem 0 !important;
-        border-radius: 0.25rem !important;
-        transition: all 0.2s ease !important;
-    }
-
-    .status-message-button:hover {
-        background-color: #3b3b4a !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }
-
-    /* Processing animation */
-    .processing-status {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .processing-dot {
-        width: 8px;
-        height: 8px;
-        background-color: #f25a5a;
-        border-radius: 50%;
-        animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-        0% {
-            transform: scale(0.95);
-            opacity: 0.5;
-        }
-        50% {
-            transform: scale(1.1);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(0.95);
-            opacity: 0.5;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
+### Session Management
 def cancel_processing():
     st.session_state.processing_status = ProcessStatus.CANCELED.value
     st.session_state.processing_status_message = "Processing canceled"
@@ -541,6 +373,179 @@ def agent_process(question):
 
     st.session_state.current_values_idx = len(st.session_state.values_history) - 1
 
+### Initialize session state variables
+if 'initialized' not in st.session_state:
+    # Initialized
+    st.session_state.initialized = True
+
+    # State
+    st.session_state.current_question = ""  # gathered from user
+    st.session_state.status_messages = []  # messages from the agent
+    st.session_state.current_values = {}  # current values of the agent 
+    st.session_state.values_history = []  # history of values
+    st.session_state.values_history_description = []  # description of the values
+    st.session_state.current_values_idx = None
+
+    # Processing status
+    st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
+    st.session_state.processing_status_message = "Waiting for input..."
+    st.session_state.should_rerun = False
+
+    # Initialize containers
+    st.session_state.control_container = None
+    st.session_state.improved_question_container = None
+    st.session_state.query_container = None
+    st.session_state.query_history_container = None
+    st.session_state.search_res_container = None
+    st.session_state.kb_container = None
+    st.session_state.answer_container = None
+    st.session_state.scored_checklist_container = None
+    st.session_state.debug_container = None
+    st.session_state.values_history_container = None
+
+    # Initialize settings
+    st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.checklist_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.query_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.answer_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.scoring_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.kb_model = OpenAIModel.GPT4O.value["name"]
+    st.session_state.max_iterations = 3
+    st.session_state.score_threshold = 0.9
+
+### START OF OUTPUT ###
+
+
+# Apply dark theme and custom styling
+st.markdown("""
+    <style>
+    /* Dark theme */
+    :root {
+        --background-color: #1e1e2e;
+        --text-color: #ffffff;
+        --status-bg-color: #2b2b3a;
+    }
+    
+    .main {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        padding: 1rem;
+    }
+    
+    header {
+        background-color: var(--background-color);
+        visibility: xhidden;
+    }
+    
+    /* Status area styling */
+    .status-message {
+        color: #cccccc;
+        font-style: italic;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    
+    .status-area {
+        height: 200px;
+        overflow-y: auto;
+        padding: 0.5rem;
+        background-color: var(--status-bg-color);
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Input styling */
+    .stTextInput > div > div > input {
+        font-size: 1.2rem;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    
+    /* JSON output styling */
+    .element-container div[data-testid="stJson"] {
+        background-color: #2b2b3a;
+        border-radius: 0.25rem;
+        padding: 1rem;
+    }
+    
+    /* Status footer styling */
+    .status-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 0.5rem;
+        background-color: #2b2b3a;
+        color: #cccccc;
+        font-style: italic;
+        z-index: 1000;
+    }
+    
+    /* Hide hamburger menu and footer */
+    .stDeployButton, footer, #MainMenu {
+        visibility: xhidden;
+    }
+    
+    /* Custom buttons */
+    .stButton > button {
+        background-color: #f25a5a;
+        color: white;
+        border: none;
+        font-weight: bold;
+    }
+
+    /* Status message buttons */
+    .status-message-button {
+        background-color: #2b2b3a !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #cccccc !important;
+        font-weight: normal !important;
+        text-align: left !important;
+        padding: 0.5rem 1rem !important;
+        margin: 0.25rem 0 !important;
+        border-radius: 0.25rem !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .status-message-button:hover {
+        background-color: #3b3b4a !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Processing animation */
+    .processing-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .processing-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #f25a5a;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 ### Create layout
 
 # Settings Sidebar
@@ -629,7 +634,7 @@ with st.sidebar:
                         st.success("Session loaded successfully")
                         st.rerun()
                 with col2:
-                    if st.button("Delete", key=f"delete_{session_file}"):
+                    if st.button("Del", key=f"delete_{session_file}"):
                         if delete_session(os.path.join(sessions_dir, session_file)):
                             st.success("Session deleted successfully")
                             st.rerun()
@@ -667,7 +672,6 @@ with left_col:
     # st.markdown("### Process Updates")
     st.session_state.values_history_container = st.empty()
    
-
 # Right column with tabs
 with right_col:
     # Create tabs
