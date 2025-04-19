@@ -85,13 +85,13 @@
     <text x="840" y="70" text-anchor="middle" class="label-completed">Search</text>
     
     <circle cx="1040" cy="40" r="20" class="stage-completed" filter="url(#glow)" style="transform-origin: 1040px 40px;" />
-    <text x="1040" y="70" text-anchor="middle" class="label-completed">KB</text>
+    <text x="1040" y="70" text-anchor="middle" class="label-completed">Knowledge Base</text>
     
     <circle cx="1240" cy="40" r="20" class="stage-completed" filter="url(#glow)" style="transform-origin: 1240px 40px;" />
     <text x="1240" y="70" text-anchor="middle" class="label-completed">Answer</text>
     
     <circle cx="1440" cy="40" r="20" class="stage-current" filter="url(#glow)" style="transform-origin: 1440px 40px;" />
-    <text x="1440" y="70" text-anchor="middle" class="label-current">Evaluate</text>
+    <text x="1440" y="70" text-anchor="middle" class="label-current">Scorecard</text>
     
     <circle cx="1640" cy="40" r="20" class="stage" />
     <text x="1640" y="70" text-anchor="middle" class="label">Done</text>
