@@ -303,10 +303,10 @@ def output_status_message_area():
                             )
                     
                     if st.session_state.processing_status == ProcessStatus.PROCESSING.value:
-                        st.markdown("""
+                        st.markdown(f"""
                             <div class="processing-status">
                                 <div class="processing-dot"></div>
-                                <span>Processing...</span>
+                                <span>{st.session_state.processing_status_message}</span>
                             </div>
                         """, unsafe_allow_html=True)
                     else:
@@ -719,21 +719,6 @@ st.header("Debug")
 st.markdown("---")
 if st.session_state.debug_container is None:
     st.session_state.debug_container = st.empty()
-
-
-### Main processing
-
-# # Set processing state if we have a new question
-# if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_INPUT.value:
-#     st.session_state.processing_status = ProcessStatus.PROCESSING.value
-#     output_control_container()
-
-#     agent_process(st.session_state.current_question)
-
-#     st.session_state.processing_status = ProcessStatus.COMPLETED.value
-#     st.rerun()
-#     output_control_container()
-#     output_status_message_area()
 
 
 output_currently_selected_values()
