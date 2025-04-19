@@ -18,13 +18,7 @@ import pandas as pd
 
 VERSION = "0.1.2"
 
-### Page configuration
-st.set_page_config(
-    page_title="RAVE - Recursive Agent for Verified Explanations",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+
 # Session management functions
 def save_session():
     """Save current session to a file"""
@@ -267,7 +261,6 @@ def output_currently_selected_values():
         output_debug_info(st.session_state.values_history[idx])
         output_values(st.session_state.values_history[idx])
 
-# Used by the status message area to output the values for the selected idx
 def output_values_for_selected_idx(idx):
     st.session_state.current_values_idx = idx
     output_debug_info(idx)
@@ -384,7 +377,6 @@ def update_values(output_data):
     st.session_state.values_history_description.append(description)
     output_values(output_data_copy)
 
-# store messages as list of {"update_idx": value_update_idx, "message": message}
 def update_status_messages(message_text):
     st.session_state.status_messages.append(message_text)
     st.session_state.processing_status_message = message_text
@@ -487,6 +479,13 @@ if 'initialized' not in st.session_state:
 
 ### START OF OUTPUT ###
 
+### Page configuration
+st.set_page_config(
+    page_title="RAVE - Recursive Agent for Verified Explanations",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
 # Apply dark theme and custom styling
 st.markdown("""
@@ -784,7 +783,6 @@ st.header("Debug")
 st.markdown("---")
 if st.session_state.debug_container is None:
     st.session_state.debug_container = st.empty()
-
 
 output_currently_selected_values()
 output_status_message_area()
