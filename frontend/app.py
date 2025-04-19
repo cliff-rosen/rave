@@ -382,6 +382,63 @@ def handle_question_input():
     agent_process()
     st.session_state.processing_status = ProcessStatus.COMPLETED.value
 
+def output_workflow_visualization():
+    """Create a workflow visualization using SVG files"""
+    
+    with st.session_state.workflow_container:
+        st.empty()
+        
+        # Get current stage based on status messages
+        current_stage = 0  # Default to first stage
+        if st.session_state.status_messages:
+            last_message = st.session_state.status_messages[-1].lower()
+            if "improving question" in last_message:
+                current_stage = 1
+            elif "generating answer requirements" in last_message:
+                current_stage = 2
+            elif "generating search query" in last_message:
+                current_stage = 3
+            elif "performing search" in last_message:
+                current_stage = 4
+            elif "updating knowledge base" in last_message:
+                current_stage = 5
+            elif "generating answer" in last_message:
+                current_stage = 6
+            elif "scoring answer" in last_message:
+                current_stage = 7
+            elif "evaluating whether to continue" in last_message:
+                current_stage = 8
+            elif st.session_state.processing_status == ProcessStatus.COMPLETED.value:
+                current_stage = 8  # Show done state when processing is completed
+
+        # Load the appropriate SVG file
+        svg_file = f"frontend/assets/workflow/state_{current_stage}_"
+        svg_file += {
+            0: "initial",
+            1: "improve",
+            2: "checklist",
+            3: "query",
+            4: "search",
+            5: "kb",
+            6: "answer",
+            7: "evaluate",
+            8: "done"
+        }[current_stage] + ".svg"
+        
+        try:
+            with open(svg_file, 'r') as f:
+                svg_content = f.read()
+                
+            # Create container div for proper sizing
+            html = f'''
+            <div style="width:100%;height:80px;overflow:hidden;">
+                {svg_content}
+            </div>
+            '''
+            
+            st.components.v1.html(html, height=80)
+        except Exception as e:
+            st.error(f"Error loading workflow visualization: {str(e)}")
 
 ### Initialize session state variables
 if 'initialized' not in st.session_state:
@@ -413,6 +470,7 @@ if 'initialized' not in st.session_state:
     st.session_state.scored_checklist_container = None
     st.session_state.debug_container = None
     st.session_state.values_history_container = None
+    st.session_state.workflow_container = None
 
     # Initialize settings
     st.session_state.question_model = OpenAIModel.GPT4O.value["name"]
@@ -686,22 +744,26 @@ with left_col:
    
 # Right column with tabs
 with right_col:
+    # Create workflow container at the top
+    st.session_state.workflow_container = st.empty()
+    output_workflow_visualization()
+    
     # Create tabs
     tab1, tab2, tab3, tab4 = st.tabs(["Search", "Knowledge Base", "Answer", "Scorecard"])
     
     # Search tab
     with tab1:
-            st.markdown("### Improved Question")
-            st.session_state.improved_question_container = st.empty()
+        st.markdown("### Improved Question")
+        st.session_state.improved_question_container = st.empty()
 
-            st.markdown("### Current Query")
-            st.session_state.query_container = st.empty()
-            
-            st.markdown("### Query History")
-            st.session_state.query_history_container = st.empty()
-            
-            st.markdown("### Search Results")
-            st.session_state.search_res_container = st.empty()
+        st.markdown("### Current Query")
+        st.session_state.query_container = st.empty()
+        
+        st.markdown("### Query History")
+        st.session_state.query_history_container = st.empty()
+        
+        st.markdown("### Search Results")
+        st.session_state.search_res_container = st.empty()
     
     # Knowledge Base tab
     with tab2:
