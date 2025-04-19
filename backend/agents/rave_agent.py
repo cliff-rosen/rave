@@ -213,8 +213,6 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         if not current_query:
             writer({"msg": "Error: No search query available"})
             return {}
-        else:
-            writer({"msg": "using current_query: " + current_query})
         
         # Perform the search
         search_results = search.invoke(current_query)
