@@ -12,26 +12,15 @@ if 'initialized' not in st.session_state:
 
 st.button("refresh")
 
-if st.session_state.x == 0:
-    st.write("button 0")
 
-if st.session_state.x == 1:
-    st.write("button 1")
+def increment_x():
+    st.session_state.x += 1
 
-st.session_state.message_container = st.empty()
-with st.session_state.message_container:
-    st.write("message: ", st.session_state.message)
+if st.button("increment x"):
+    increment_x()
 
-def agent_loop():
-    st.session_state.message = "agent loop 1"
-    for i in range(2):
-        print("agent loop", i)
-        st.session_state.message_container.write("agent loop" + str(i))
-        time.sleep(1)
-    st.session_state.message = "agent loop 2"
-    st.session_state.x = 1
+some_text = st.text_input("some text", on_change=increment_x)
 
-if st.button("agent loop"):
-    agent_loop()
 
-st.write("message 2: ", st.session_state.message)
+st.write("x: ", st.session_state.x)
+st.write("some text: ", some_text)

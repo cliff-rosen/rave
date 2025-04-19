@@ -332,10 +332,12 @@ def update_status_messages(message_text):
     st.session_state.processing_status_message = message_text
     output_status_message_area()
 
-def agent_process(question):
+def agent_process():
+    print("agent_process: " + st.session_state.current_question)
+
     initial_state = {
         "messages": [],
-        "question": question,
+        "question": st.session_state.current_question,
         "improved_question": "",
         "scored_checklist": [],
         "current_query": None,
@@ -373,6 +375,14 @@ def agent_process(question):
 
     st.session_state.current_values_idx = len(st.session_state.values_history) - 1
 
+def handle_question_input():
+    st.session_state.current_question = st.session_state.question_input
+    st.session_state.processing_status = ProcessStatus.PROCESSING.value
+    output_control_container()
+    agent_process()
+    st.session_state.processing_status = ProcessStatus.COMPLETED.value
+
+
 ### Initialize session state variables
 if 'initialized' not in st.session_state:
     # Initialized
@@ -385,6 +395,7 @@ if 'initialized' not in st.session_state:
     st.session_state.values_history = []  # history of values
     st.session_state.values_history_description = []  # description of the values
     st.session_state.current_values_idx = None
+    st.session_state.debug_message = "-"
 
     # Processing status
     st.session_state.processing_status = ProcessStatus.WAITING_FOR_INPUT.value
@@ -663,11 +674,12 @@ with left_col:
     # Question input    
     question = st.text_input(
         "What would you like to know?",
+        key="question_input",
         value=st.session_state.current_question,
-        placeholder="Enter your question here..."
+        placeholder="Enter your question here...",
+        on_change=handle_question_input
     )
-    st.session_state.current_question = question
-    
+        
     # Status messages area
     # st.markdown("### Process Updates")
     st.session_state.values_history_container = st.empty()
@@ -711,17 +723,17 @@ if st.session_state.debug_container is None:
 
 ### Main processing
 
-# Set processing state if we have a new question
-if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_INPUT.value:
-    st.session_state.processing_status = ProcessStatus.PROCESSING.value
-    output_control_container()
+# # Set processing state if we have a new question
+# if question and st.session_state.processing_status == ProcessStatus.WAITING_FOR_INPUT.value:
+#     st.session_state.processing_status = ProcessStatus.PROCESSING.value
+#     output_control_container()
 
-    agent_process(st.session_state.current_question)
+#     agent_process(st.session_state.current_question)
 
-    st.session_state.processing_status = ProcessStatus.COMPLETED.value
-    st.rerun()
-    output_control_container()
-    output_status_message_area()
+#     st.session_state.processing_status = ProcessStatus.COMPLETED.value
+#     st.rerun()
+#     output_control_container()
+#     output_status_message_area()
 
 
 output_currently_selected_values()
