@@ -1,24 +1,16 @@
-from langchain_core.prompts import ChatPromptTemplate
+import sys
+from pathlib import Path
 
-def main():
-    # Create a simple prompt template
-    format_instructions = "These are the format instructions"
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Test system message with {format_instructions}"),
-        ("user", "Test user message")
-    ]).partial(format_instructions=format_instructions)
-    
-    # Now format with the remaining variables
-    try:
-        formatted_prompt = prompt.format(
-            question="test question",
-            current_kb="[]",
-            search_results="[]"
-        )
-        print("Success!")
-        print(formatted_prompt)
-    except Exception as e:
-        print(f"Error: {str(e)}")
+# Add project root to Python path
+project_root = str(Path(__file__).parent.parent)
+sys.path.append(project_root)
 
-if __name__ == "__main__":
-    main() 
+from backend.agents.rave_agent import search2
+
+res = search2(
+    {"question": "What is the capital of France?",
+     "current_query": "What is the capital of France?"}, 
+     writer=None)
+
+print(res)
+

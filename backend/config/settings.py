@@ -4,6 +4,7 @@ import streamlit as st
 # API Keys and Authentication
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
+SERPAPI_API_KEY = st.secrets["SERPAPI_API_KEY"]
 
 # Agent Configuration
 MAX_ITERATIONS = 3

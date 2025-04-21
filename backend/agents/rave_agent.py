@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 import random
 import operator
+from serpapi import GoogleSearch
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -28,7 +29,8 @@ from ..config.settings import (
     LOG_LEVEL,
     LOG_FORMAT,
     TAVILY_API_KEY,
-    OPENAI_API_KEY
+    OPENAI_API_KEY,
+    SERPAPI_API_KEY
 )
 
 from .utils.prompts import (
@@ -193,7 +195,8 @@ def generate_query(state: State, writer: StreamWriter, config: Dict[str, Any]) -
 
 def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using the generated query"""
-    writer({"msg": "Performing search..."})
+    if writer:
+        writer({"msg": "Performing search..."})
     
     if not validate_state(state):
         writer({"msg": "Error: No question provided"})
@@ -221,11 +224,67 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
             writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
             return {"search_results": []}
         
-        writer({"msg": "Search completed successfully"})
+        if writer:
+            writer({"msg": "Search completed successfully"})
         return {"search_results": search_results}
         
     except Exception as e:
         writer({"msg": f"Error performing search: {str(e)}"})
+        return {}
+
+def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+    """Perform a search using SerpAPI instead of Tavily"""
+    if writer:
+        writer({"msg": "Performing search with SerpAPI..."})
+    
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    try:
+        # Debug: Check API key
+        if not SERPAPI_API_KEY:
+            writer({"msg": "Error: SERPAPI_API_KEY not set"})
+            return {}
+        
+        # Get the current query from state
+        current_query = state.get("current_query")
+        if not current_query:
+            writer({"msg": "Error: No search query available"})
+            return {}
+        
+        # Perform the search using SerpAPI
+        params = {
+            "engine": "google",
+            "q": current_query,
+            "api_key": SERPAPI_API_KEY,
+            "num": MAX_SEARCH_RESULTS
+        }
+        
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        
+        # Format results to match Tavily's format
+        formatted_results = []
+        if "organic_results" in results:
+            for result in results["organic_results"]:
+                formatted_results.append({
+                    "title": result.get("title", ""),
+                    "link": result.get("link", ""),
+                    "snippet": result.get("snippet", ""),
+                    "content": result.get("snippet", "")  # Using snippet as content since SerpAPI doesn't provide full content
+                })
+        
+        if not formatted_results:
+            writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
+            return {"search_results": []}
+        
+        if writer:
+            writer({"msg": "Search completed successfully with SerpAPI"})
+        return {"search_results": formatted_results}
+        
+    except Exception as e:
+        writer({"msg": f"Error performing search with SerpAPI: {str(e)}"})
         return {}
 
 def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
