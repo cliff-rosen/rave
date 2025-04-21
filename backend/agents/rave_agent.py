@@ -43,10 +43,12 @@ from .utils.prompts import (
     create_checklist_prompt,
     create_scoring_prompt,
     create_kb_update_prompt,
+    create_url_selection_prompt,
     ChecklistItem,
     ChecklistResponse,
     KnowledgeNugget,
-    KBUpdateResponse
+    KBUpdateResponse,
+    URLSelectionResponse
 )
 
 class State(TypedDict):
@@ -58,6 +60,7 @@ class State(TypedDict):
     answer: str
     query_history: List[str]
     search_results: List[Dict[str, Any]]
+    urls_to_scrape: List[str]
     current_query: str
     knowledge_base: List[KnowledgeNugget]
     cancelled: bool
@@ -66,6 +69,7 @@ def validate_state(state: State) -> bool:
     """Validate the state before processing"""
     if not state["question"]:
         print("No question provided")
+        print(state)
         return False
     return True
 
@@ -259,8 +263,7 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         params = {
             "engine": "google",
             "q": current_query,
-            "api_key": SERPAPI_API_KEY,
-            "num": 10
+            "api_key": SERPAPI_API_KEY
         }
         
         search = GoogleSearch(params)
@@ -289,6 +292,46 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
     except Exception as e:
         writer({"msg": f"Error performing search with SerpAPI: {str(e)}"})
         return {}
+
+def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
+    """Analyze search results to identify the most relevant URLs for answering the question"""
+
+    if writer:
+        writer({"msg": "Analyzing search results to identify relevant URLs..."})
+    
+    if not state.get("search_results"):
+        writer({"msg": "No search results available to analyze"})
+        return {"urls_to_scrape": []}
+    
+    llm = getModel("url_model", config, writer)
+    parser = PydanticOutputParser(pydantic_object=URLSelectionResponse)
+    format_instructions = parser.get_format_instructions()
+    url_selection_prompt = create_url_selection_prompt(format_instructions)
+    
+    try:
+        formatted_prompt = url_selection_prompt.format(
+            question=state["improved_question"],
+            search_results=json.dumps(state["search_results"]),
+            format_instructions=format_instructions
+        )
+        
+        url_response = llm.invoke(formatted_prompt)
+        
+        # Parse the response using Pydantic
+        try:
+            parsed_response = parser.parse(url_response.content)
+            urls_to_scrape = parsed_response.urls
+            
+            writer({"msg": f"Selected {len(urls_to_scrape)} relevant URLs for scraping"})
+            return {"urls_to_scrape": urls_to_scrape}
+            
+        except Exception as parse_error:
+            writer({"msg": f"Error parsing URL selection response: {str(parse_error)}"})
+            return {"urls_to_scrape": []}
+            
+    except Exception as e:
+        writer({"msg": f"Error selecting URLs: {str(e)}"})
+        return {"urls_to_scrape": []}
 
 def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate an answer to the improved question in markdown format"""
@@ -474,6 +517,7 @@ graph_builder.add_node("improve_question", improve_question)
 graph_builder.add_node("generate_scored_checklist", generate_scored_checklist)
 graph_builder.add_node("generate_query", generate_query)
 graph_builder.add_node("search", search)
+graph_builder.add_node("get_best_urls_from_search", get_best_urls_from_search)
 graph_builder.add_node("update_knowledge_base", update_knowledge_base)
 graph_builder.add_node("generate_answer", generate_answer)
 graph_builder.add_node("score_answer", score_answer)

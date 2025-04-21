@@ -32,6 +32,10 @@ class KBUpdateResponse(BaseModel):
     new_nuggets: List[KnowledgeNugget] = Field(default_factory=list)
     updated_nuggets: List[KnowledgeNuggetUpdate] = Field(default_factory=list)
 
+class URLSelectionResponse(BaseModel):
+    """Response format for URL selection"""
+    urls: List[str] = Field(description="List of URLs to scrape for more information")
+
 def create_evaluator_prompt():
     """Create a prompt for evaluating answers"""
     return ChatPromptTemplate.from_messages([
@@ -159,4 +163,23 @@ def create_kb_update_prompt(format_instructions: str):
         New Search Results: {search_results}
         
         Analyze and update the knowledge base. Return a JSON object following the format instructions exactly:""")
+    ])
+
+def create_url_selection_prompt(format_instructions: str):
+    """Create a prompt for selecting the most relevant URLs from search results"""
+    return ChatPromptTemplate.from_messages([
+        ("system", """You are an expert at analyzing search results and identifying the most relevant sources.
+        Your task is to select the URLs that are most likely to contain information that will help answer the question.
+        
+        For each search result:
+        1. Analyze the title and snippet to determine relevance
+        2. Consider the source's credibility and authority
+        3. Prioritize sources that appear to directly address the question
+        4. Select a diverse set of sources to ensure comprehensive coverage
+        
+        {format_instructions}"""),
+        ("user", """Question: {question}
+        Search Results: {search_results}
+        
+        Select the most relevant URLs to scrape:""")
     ]) 
