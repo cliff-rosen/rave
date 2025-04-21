@@ -69,7 +69,6 @@ def validate_state(state: State) -> bool:
     """Validate the state before processing"""
     if not state["question"]:
         print("No question provided")
-        print(state)
         return False
     return True
 
@@ -238,7 +237,6 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
 
 def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using SerpAPI instead of Tavily"""
-    print("search2", state)
 
     if writer:
         writer({"msg": "Performing search with SerpAPI..."})
@@ -268,7 +266,6 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         
         search = GoogleSearch(params)
         results = search.get_dict()
-        print("results", results)
         
         # Format results to match Tavily's format
         formatted_results = []
@@ -300,7 +297,9 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
         writer({"msg": "Analyzing search results to identify relevant URLs..."})
     
     if not state.get("search_results"):
-        writer({"msg": "No search results available to analyze"})
+        if writer:
+            writer({"msg": "No search results available to analyze"})
+        print("No search results available to analyze")
         return {"urls_to_scrape": []}
     
     llm = getModel("url_model", config, writer)
@@ -316,13 +315,17 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
         )
         
         url_response = llm.invoke(formatted_prompt)
-        
+        print("*****************")
+        print(url_response.content)
+        print("*****************")
+
         # Parse the response using Pydantic
         try:
             parsed_response = parser.parse(url_response.content)
             urls_to_scrape = parsed_response.urls
             
-            writer({"msg": f"Selected {len(urls_to_scrape)} relevant URLs for scraping"})
+            if writer:
+                writer({"msg": f"Selected {len(urls_to_scrape)} relevant URLs for scraping"})
             return {"urls_to_scrape": urls_to_scrape}
             
         except Exception as parse_error:
