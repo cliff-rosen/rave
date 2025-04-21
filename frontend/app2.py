@@ -1,26 +1,50 @@
 import streamlit as st
 import time
+from backend.agents.rave_agent import search2
+
+
+state = {
+    "question": "my question",
+    "current_query": "",
+    "search_results": [],
+    "urls_to_scrape": [],
+    "scraped_content": []
+}
+
+def search():
+    st.session_state.search_status = "searching..."
+    st.session_state.search_results = []
+    st.session_state.urls_to_scrape = []
+
+    st.session_state.search_status_container.write("searching...")
+    state["current_query"] = st.session_state.question
+    print("state", state)
+    res = search2(
+            state,
+            writer=None,
+            config={"configurable": {"max_search_results": 4}}
+        )
+    st.session_state.search_status_container.empty()
+    print("res", res)
+    st.session_state.search_results = res["search_results"]
+    st.session_state.search_status = "search completed"
 
 if 'initialized' not in st.session_state:
     st.session_state.initialized = True
-    st.session_state.status_messages = []
-    st.session_state.state = 0
-    st.session_state.x = 0
-    st.session_state.message = "hello"
-    st.session_state.message_container = None
-    st.session_state.message_container_2 = None
+    st.session_state.question = "my question"
+    st.session_state.search_results = []
+    st.session_state.urls_to_scrape = []
+    st.session_state.scraped_content = []
+
 
 st.button("refresh")
 
+st.text_input("question", on_change=search, key="question")
 
-def increment_x():
-    st.session_state.x += 1
+st.write("search results")
+st.session_state.search_status_container = st.empty()
+search_status_container = st.empty()
 
-if st.button("increment x"):
-    increment_x()
-
-some_text = st.text_input("some text", on_change=increment_x)
+st.json(st.session_state.search_results)
 
 
-st.write("x: ", st.session_state.x)
-st.write("some text: ", some_text)

@@ -10,7 +10,8 @@ from backend.agents.rave_agent import search2
 res = search2(
     {"question": "What is the capital of France?",
      "current_query": "What is the capital of France?"}, 
-     writer=None)
+     writer=None,
+     config={"configurable": {"max_search_results": 4}})
 
 print(res)
 

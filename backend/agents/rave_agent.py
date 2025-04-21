@@ -232,8 +232,10 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         writer({"msg": f"Error performing search: {str(e)}"})
         return {}
 
-def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
+def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using SerpAPI instead of Tavily"""
+    print("search2", state)
+
     if writer:
         writer({"msg": "Performing search with SerpAPI..."})
     
@@ -258,11 +260,12 @@ def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]
             "engine": "google",
             "q": current_query,
             "api_key": SERPAPI_API_KEY,
-            "num": MAX_SEARCH_RESULTS
+            "num": 10
         }
         
         search = GoogleSearch(params)
         results = search.get_dict()
+        print("results", results)
         
         # Format results to match Tavily's format
         formatted_results = []
