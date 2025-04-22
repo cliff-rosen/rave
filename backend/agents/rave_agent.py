@@ -322,6 +322,7 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
         # Parse the response using Pydantic
         try:
             parsed_response = parser.parse(url_response.content)
+            # Return the full URLWithScore objects
             urls_to_scrape = parsed_response.urls
             
             if writer:
@@ -337,7 +338,6 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
         return {"urls_to_scrape": []}
 
 def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
-   
     """Scrape the URLs and return the content"""
 
     if writer:
@@ -347,11 +347,12 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
         writer({"msg": "No URLs to scrape"})
         return {"scraped_content": []}
     
-    urls_to_scrape = state.get("urls_to_scrape")
-
+    # Extract URLs from URLWithScore objects
+    urls_to_scrape = [url_obj.url for url_obj in state.get("urls_to_scrape")]
+    
+    docs = []
     for url in urls_to_scrape:
         loader = WebBaseLoader(web_paths=[url])
-        docs = []
         for doc in loader.lazy_load():
             docs.append(doc)      
 

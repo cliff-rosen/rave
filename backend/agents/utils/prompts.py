@@ -32,9 +32,14 @@ class KBUpdateResponse(BaseModel):
     new_nuggets: List[KnowledgeNugget] = Field(default_factory=list)
     updated_nuggets: List[KnowledgeNuggetUpdate] = Field(default_factory=list)
 
+class URLWithScore(BaseModel):
+    """A URL with its relevance score"""
+    url: str = Field(description="The URL to scrape")
+    score: int = Field(description="Relevance score from 0 to 100", ge=0, le=100)
+
 class URLSelectionResponse(BaseModel):
     """Response format for URL selection"""
-    urls: List[str] = Field(description="List of URLs to scrape for more information")
+    urls: List[URLWithScore] = Field(description="List of URLs to scrape with their relevance scores")
 
 def create_evaluator_prompt():
     """Create a prompt for evaluating answers"""
@@ -176,10 +181,15 @@ def create_url_selection_prompt(format_instructions: str):
         2. Consider the source's credibility and authority
         3. Prioritize sources that appear to directly address the question
         4. Select a diverse set of sources to ensure comprehensive coverage
+        5. Assign a relevance score from 0 to 100 for each URL based on:
+           - How directly it addresses the question
+           - Source credibility and authority
+           - Content depth and comprehensiveness
+           - Recency and timeliness
         
         {format_instructions}"""),
         ("user", """Question: {question}
         Search Results: {search_results}
         
-        Select the most relevant URLs to scrape:""")
+        Select the most relevant URLs to scrape and assign each a relevance score:""")
     ]) 
