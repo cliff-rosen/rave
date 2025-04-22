@@ -61,6 +61,7 @@ class State(TypedDict):
     answer: str
     query_history: List[str]
     search_results: List[Dict[str, Any]]
+    scraped_content: List[str] 
     urls_to_scrape: List[str]
     current_query: str
     knowledge_base: List[KnowledgeNugget]
@@ -372,6 +373,8 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
             for attempt in range(max_retries):
                 try:
                     for doc in loader.lazy_load():
+                        for (k,v) in doc.metadata.items():
+                            print(k,v)
                         docs.append(doc)
                     break  # Success, exit retry loop
                 except Exception as e:
@@ -388,76 +391,6 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
             continue
 
     return {"scraped_content": docs}
-
-def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
-    """Generate an answer to the improved question in markdown format"""
-    writer({"msg": "Generating answer ..."})
-    
-    if not validate_state(state):
-        writer({"msg": "Error: No question provided"})
-        return {}
-    
-    llm = getModel("answer_model", config)
-    answer_prompt = create_direct_answer_prompt()
-    
-    try:
-        # Use the improved question if available, otherwise use the original
-        question_to_use = state.get("improved_question", state["question"])
-        
-        # Get checklist and knowledge base
-        checklist = state.get("scored_checklist", [])
-        knowledge_base = state.get("knowledge_base", [])
-        
-        # Format the prompt with all necessary information and markdown instruction
-        formatted_prompt = answer_prompt.format(
-            question=question_to_use,
-            checklist=json.dumps([item["item_to_score"] for item in checklist]),
-            knowledge_base=json.dumps([nugget.dict() for nugget in knowledge_base]),
-            format_instructions="Please format your answer in markdown, using appropriate headings, lists, and formatting to make the information clear and well-structured."
-        )
-        
-        answer = llm.invoke(formatted_prompt)
-        writer({"msg": "Answer generated successfully"})
-        
-        return {"answer": answer.content}
-        
-    except Exception as e:
-        writer({"msg": f"Error generating answer: {str(e)}"})
-        return {}
-
-def score_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
-    """Score the answer against the checklist requirements"""
-    writer({"msg": "Scoring answer against requirements..."})
-    
-    if not validate_state(state):
-        writer({"msg": "Error: No question provided"})
-        return {}
-    
-    llm = getModel("scoring_model", config)
-    parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
-    
-    try:
-        format_instructions = parser.get_format_instructions()
-        scoring_prompt = create_scoring_prompt(format_instructions)
-        formatted_prompt = scoring_prompt.format(
-            question=state["improved_question"],
-            answer=state["answer"],
-            checklist=json.dumps([item["item_to_score"] for item in state["scored_checklist"]]),
-            format_instructions=format_instructions
-        )
-        
-        scoring_response = llm.invoke(formatted_prompt)
-        parsed_response = parser.parse(scoring_response.content)
-        
-        # Convert Pydantic model back to dict format
-        updated_checklist = [item.dict() for item in parsed_response.items]
-        
-        writer({"msg": "Answer scored successfully"})
-        return {"scored_checklist": updated_checklist}
-        
-    except Exception as e:
-        writer({"msg": f"Error scoring answer: {str(e)}"})
-        return {}
 
 def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Update the knowledge base with new information from search results"""
@@ -533,6 +466,76 @@ def update_knowledge_base(state: State, writer: StreamWriter, config: Dict[str, 
         writer({"msg": f"Error updating knowledge base: {str(e)}"})
         return {"knowledge_base": current_kb}
 
+def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
+    """Generate an answer to the improved question in markdown format"""
+    writer({"msg": "Generating answer ..."})
+    
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    llm = getModel("answer_model", config)
+    answer_prompt = create_direct_answer_prompt()
+    
+    try:
+        # Use the improved question if available, otherwise use the original
+        question_to_use = state.get("improved_question", state["question"])
+        
+        # Get checklist and knowledge base
+        checklist = state.get("scored_checklist", [])
+        knowledge_base = state.get("knowledge_base", [])
+        
+        # Format the prompt with all necessary information and markdown instruction
+        formatted_prompt = answer_prompt.format(
+            question=question_to_use,
+            checklist=json.dumps([item["item_to_score"] for item in checklist]),
+            knowledge_base=json.dumps([nugget.dict() for nugget in knowledge_base]),
+            format_instructions="Please format your answer in markdown, using appropriate headings, lists, and formatting to make the information clear and well-structured."
+        )
+        
+        answer = llm.invoke(formatted_prompt)
+        writer({"msg": "Answer generated successfully"})
+        
+        return {"answer": answer.content}
+        
+    except Exception as e:
+        writer({"msg": f"Error generating answer: {str(e)}"})
+        return {}
+
+def score_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
+    """Score the answer against the checklist requirements"""
+    writer({"msg": "Scoring answer against requirements..."})
+    
+    if not validate_state(state):
+        writer({"msg": "Error: No question provided"})
+        return {}
+    
+    llm = getModel("scoring_model", config)
+    parser = PydanticOutputParser(pydantic_object=ChecklistResponse)
+    
+    try:
+        format_instructions = parser.get_format_instructions()
+        scoring_prompt = create_scoring_prompt(format_instructions)
+        formatted_prompt = scoring_prompt.format(
+            question=state["improved_question"],
+            answer=state["answer"],
+            checklist=json.dumps([item["item_to_score"] for item in state["scored_checklist"]]),
+            format_instructions=format_instructions
+        )
+        
+        scoring_response = llm.invoke(formatted_prompt)
+        parsed_response = parser.parse(scoring_response.content)
+        
+        # Convert Pydantic model back to dict format
+        updated_checklist = [item.dict() for item in parsed_response.items]
+        
+        writer({"msg": "Answer scored successfully"})
+        return {"scored_checklist": updated_checklist}
+        
+    except Exception as e:
+        writer({"msg": f"Error scoring answer: {str(e)}"})
+        return {}
+
 ### Conditions
 def should_continue_searching(state: State, config: Dict[str, Any], writer: StreamWriter) -> bool:
     """Check if we should continue searching based on checklist scores and max iterations"""
@@ -572,8 +575,9 @@ graph_builder = StateGraph(State)
 graph_builder.add_node("improve_question", improve_question)
 graph_builder.add_node("generate_scored_checklist", generate_scored_checklist)
 graph_builder.add_node("generate_query", generate_query)
-graph_builder.add_node("search", search)
+graph_builder.add_node("search2", search2)
 graph_builder.add_node("get_best_urls_from_search", get_best_urls_from_search)
+graph_builder.add_node("scrape_urls", scrape_urls)
 graph_builder.add_node("update_knowledge_base", update_knowledge_base)
 graph_builder.add_node("generate_answer", generate_answer)
 graph_builder.add_node("score_answer", score_answer)
@@ -582,9 +586,10 @@ graph_builder.add_node("score_answer", score_answer)
 graph_builder.add_edge(START, "improve_question")
 graph_builder.add_edge("improve_question", "generate_scored_checklist")
 graph_builder.add_edge("generate_scored_checklist", "generate_query")
-graph_builder.add_edge("generate_query", "search")
-#graph_builder.add_edge("generate_query", END)
-graph_builder.add_edge("search", "update_knowledge_base")
+graph_builder.add_edge("generate_query", "search2")
+graph_builder.add_edge("search2", "get_best_urls_from_search")
+graph_builder.add_edge("get_best_urls_from_search", "scrape_urls")
+graph_builder.add_edge("scrape_urls", "update_knowledge_base")
 graph_builder.add_edge("update_knowledge_base", "generate_answer")
 graph_builder.add_edge("generate_answer", "score_answer")
 graph_builder.add_conditional_edges(

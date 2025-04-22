@@ -223,6 +223,10 @@ def output_values(output_data):
         if "search_results" in output_data:
             st.json({"search_results": output_data["search_results"]})
     
+    with st.session_state.scraped_content_container:
+        if "scraped_content" in output_data:
+            st.json({"scraped_content": output_data["scraped_content"]})
+
     with st.session_state.kb_container:
         if "knowledge_base" in output_data:
             st.json({"knowledge_base": output_data["knowledge_base"]})
@@ -393,6 +397,7 @@ def agent_process():
         "current_query": None,
         "query_history": [],
         "search_results": [],
+        "scraped_content": [],
         "knowledge_base": [],
         "answer": None,
     }
@@ -766,6 +771,9 @@ with right_col:
         
         st.markdown("### Search Results")
         st.session_state.search_res_container = st.empty()
+
+        st.markdown("### Scraped Content")
+        st.session_state.scraped_content_container = st.empty()
     
     # Knowledge Base tab
     with tab2:
