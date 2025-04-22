@@ -14,6 +14,7 @@ state = {
 if "initialized" not in st.session_state:
     st.session_state.initialized = False
     st.session_state.state = state
+    st.session_state.cur_idx = 0
 
 if st.button("reset"):
     st.session_state.state = state
@@ -48,8 +49,6 @@ def get_best_urls():
 
 def scrape_urls_from_best_urls():
     st.session_state.search_status_container.write("retrieving urls...")
-    url = st.session_state.state["urls_to_scrape"][0]
-    st.session_state.state["urls_to_scrape"] = [url]
     res = scrape_urls(
         st.session_state.state,
         writer=None,
@@ -60,21 +59,33 @@ def scrape_urls_from_best_urls():
 
 left_col, right_col = st.columns([1,4])
 
+def next_url():
+    st.session_state.cur_idx += 1
+
+def prev_url():
+    st.session_state.cur_idx -= 1
+
 with left_col:
     st.text_input("question", on_change=search, key="query")
     st.button("get best urls", on_click=get_best_urls)
     st.button("scrape urls", on_click=scrape_urls_from_best_urls)  
     st.write("STATUS")
     st.session_state.search_status_container = st.empty()
-
+    st.button("next", on_click=next_url)
+    st.button("prev", on_click=prev_url)
 
 
 with right_col:
     st.write("state")
     st.session_state.state_container = st.empty()
     st.session_state.state_container.write(st.session_state.state)
+
     st.session_state.scraped_content_container = st.empty()
-    st.markdown(st.session_state.state["scraped_content"][0])
+    container = st.container()
+    with container:
+        st.write(f"idx: {st.session_state.cur_idx}")
+        st.write(f"url: {st.session_state.state['urls_to_scrape'][st.session_state.cur_idx]}")
+        st.markdown(st.session_state.state["scraped_content"][st.session_state.cur_idx])
 
 
 st.markdown("---")

@@ -352,9 +352,40 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
     
     docs = []
     for url in urls_to_scrape:
-        loader = WebBaseLoader(web_paths=[url])
-        for doc in loader.lazy_load():
-            docs.append(doc)      
+        try:
+            # Configure WebBaseLoader with proper headers and timeouts
+            loader = WebBaseLoader(
+                web_paths=[url],
+                requests_kwargs={
+                    "headers": {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.5",
+                    },
+                    "timeout": 10,  # 10 second timeout
+                    "verify": True,  # Verify SSL certificates
+                }
+            )
+            
+            # Try to load the content with retries
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    for doc in loader.lazy_load():
+                        docs.append(doc)
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    if attempt == max_retries - 1:  # Last attempt
+                        if writer:
+                            writer({"msg": f"Failed to scrape {url} after {max_retries} attempts: {str(e)}"})
+                    else:
+                        time.sleep(1)  # Wait before retrying
+                        continue
+            
+        except Exception as e:
+            if writer:
+                writer({"msg": f"Error scraping {url}: {str(e)}"})
+            continue
 
     return {"scraped_content": docs}
 
