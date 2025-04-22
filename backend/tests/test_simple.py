@@ -1,17 +1,15 @@
-import sys
-from pathlib import Path
+from langchain_community.document_loaders import WebBaseLoader
 
-# Add project root to Python path
-project_root = str(Path(__file__).parent.parent)
-sys.path.append(project_root)
 
-from backend.agents.rave_agent import search2
+page_url = "https://python.langchain.com/docs/how_to/chatbots_memory/"
 
-res = search2(
-    {"question": "What is the capital of France?",
-     "current_query": "What is the capital of France?"}, 
-     writer=None,
-     config={"configurable": {"max_search_results": 4}})
+loader = WebBaseLoader(web_paths=[page_url])
+docs = []
 
-print(res)
+for doc in loader.lazy_load():
+    docs.append(doc)
 
+assert len(docs) == 1
+doc = docs[0]
+
+print(doc)

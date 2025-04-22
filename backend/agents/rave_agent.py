@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_community.document_loaders import WebBaseLoader
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -279,7 +280,8 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
                 })
         
         if not formatted_results:
-            writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
+            if writer:
+                writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
             return {"search_results": []}
         
         if writer:
@@ -287,7 +289,8 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         return {"search_results": formatted_results}
         
     except Exception as e:
-        writer({"msg": f"Error performing search with SerpAPI: {str(e)}"})
+        if writer:
+            writer({"msg": f"Error performing search with SerpAPI: {str(e)}"})
         return {}
 
 def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
@@ -315,9 +318,6 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
         )
         
         url_response = llm.invoke(formatted_prompt)
-        print("*****************")
-        print(url_response.content)
-        print("*****************")
 
         # Parse the response using Pydantic
         try:
@@ -335,6 +335,27 @@ def get_best_urls_from_search(state: State, writer: StreamWriter, config: Dict[s
     except Exception as e:
         writer({"msg": f"Error selecting URLs: {str(e)}"})
         return {"urls_to_scrape": []}
+
+def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
+   
+    """Scrape the URLs and return the content"""
+
+    if writer:
+        writer({"msg": "Scraping URLs..."})
+
+    if not state.get("urls_to_scrape"):
+        writer({"msg": "No URLs to scrape"})
+        return {"scraped_content": []}
+    
+    urls_to_scrape = state.get("urls_to_scrape")
+
+    for url in urls_to_scrape:
+        loader = WebBaseLoader(web_paths=[url])
+        docs = []
+        for doc in loader.lazy_load():
+            docs.append(doc)      
+
+    return {"scraped_content": docs}
 
 def generate_answer(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Generate an answer to the improved question in markdown format"""
