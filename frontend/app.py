@@ -223,6 +223,10 @@ def output_values(output_data):
         if "search_results" in output_data:
             st.json({"search_results": output_data["search_results"]})
     
+    with st.session_state.urls_to_scrape_container:
+        if "urls_to_scrape" in output_data:
+            st.json({"urls_to_scrape": output_data["urls_to_scrape"]})
+    
     with st.session_state.scraped_content_container:
         if "scraped_content" in output_data:
             st.json({"scraped_content": output_data["scraped_content"]})
@@ -327,6 +331,10 @@ def output_workflow_visualization():
                 current_stage = 3
             elif "performing search" in last_message:
                 current_stage = 4
+            elif "analyzing search results" in last_message:
+                current_stage = 4
+            elif "scraping urls" in last_message:
+                current_stage = 4
             elif "updating knowledge base" in last_message:
                 current_stage = 5
             elif "generating answer" in last_message:
@@ -397,6 +405,7 @@ def agent_process():
         "current_query": None,
         "query_history": [],
         "search_results": [],
+        "urls_to_scrape": [],
         "scraped_content": [],
         "knowledge_base": [],
         "answer": None,
@@ -771,6 +780,9 @@ with right_col:
         
         st.markdown("### Search Results")
         st.session_state.search_res_container = st.empty()
+
+        st.markdown("### URLs to Scrape")
+        st.session_state.urls_to_scrape_container = st.empty()
 
         st.markdown("### Scraped Content")
         st.session_state.scraped_content_container = st.empty()
