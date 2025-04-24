@@ -11,6 +11,7 @@ sys.path.insert(0, project_root)
 import streamlit as st
 from backend.agents.rave_agent import graph
 from backend.config.models import OpenAIModel, get_model_config
+
 import time
 import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
@@ -404,8 +405,8 @@ def agent_process():
         "scored_checklist": [],
         "current_query": None,
         "query_history": [],
-        "search_results": [],
-        "urls_to_scrape": [],
+    "search_results": [],
+    "urls_to_scrape": [],
         "scraped_content": [],
         "knowledge_base": [],
         "answer": None,

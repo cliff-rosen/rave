@@ -7,6 +7,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.agents.rave_agent import search, search2, get_best_urls_from_search, scrape_urls
+from backend.agents.utils.prompts import URLWithScore
 
 state = {
     "question": "i'd like to better understand how the economy works",
@@ -72,6 +73,8 @@ def get_best_urls():
 
 def scrape_urls_from_best_urls():
     st.session_state.search_status_container.write("retrieving urls...")
+    urlObj = URLWithScore(url="https://www.google.com", score=1.0)
+    st.session_state.state["urls_to_scrape"] = [urlObj]
     res = scrape_urls(
         st.session_state.state,
         writer=None,

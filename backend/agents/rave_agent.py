@@ -269,9 +269,6 @@ def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]
         
         search = GoogleSearch(params)
         results = search.get_dict()
-        print("--------------------------------")
-        print(results)
-        print("--------------------------------")
         
         # Format results to match Tavily's format
         formatted_results = []
@@ -354,7 +351,7 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
     
     # Extract URLs from URLWithScore objects
     urls_to_scrape = [url_obj.url for url_obj in state.get("urls_to_scrape")]
-    
+
     docs = []
     for url in urls_to_scrape:
         try:
@@ -371,14 +368,18 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
                     "verify": True,  # Verify SSL certificates
                 }
             )
-            
+
             # Try to load the content with retries
             max_retries = 3
             for attempt in range(max_retries):
                 try:
+                    print("--------------------------------")
+                    print("attempt", attempt)
+                    print("--------------------------------")
                     for doc in loader.lazy_load():
-                        for (k,v) in doc.metadata.items():
-                            print(k,v)
+                        print("--------------------------------")
+                        print(doc)
+                        print("--------------------------------")
                         docs.append(doc)
                     break  # Success, exit retry loop
                 except Exception as e:
@@ -386,6 +387,7 @@ def scrape_urls(state: State, writer: StreamWriter, config: Dict[str, Any]) -> A
                         if writer:
                             writer({"msg": f"Failed to scrape {url} after {max_retries} attempts: {str(e)}"})
                     else:
+                        print("error", e)
                         time.sleep(1)  # Wait before retrying
                         continue
             

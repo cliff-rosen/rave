@@ -1,7 +1,21 @@
-import streamlit as st
-import time
 import sys
 import os
+import random
+from enum import Enum
+import json
+from datetime import datetime
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+import streamlit as st
+from backend.agents.rave_agent import search2, get_best_urls_from_search, scrape_urls
+from backend.agents.utils.prompts import URLWithScore
+from backend.config.models import OpenAIModel, get_model_config
+import time
+import copy
+from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
+import pandas as pd
 
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,8 +50,7 @@ def search():
     print("state", st.session_state.state)
     res = search2(
             st.session_state.state,
-            writer=None,
-            config={"configurable": {"max_search_results": 4}}
+            writer=None
         )
     st.session_state.state_container.write("search completed")
     st.session_state.state["search_results"] = res["search_results"]
@@ -54,6 +67,8 @@ def get_best_urls():
 
 def scrape_urls_from_best_urls():
     st.session_state.search_status_container.write("retrieving urls...")
+    urlObj = URLWithScore(url="https://www.google.com", score=1.0)
+    st.session_state.state["urls_to_scrape"] = [urlObj]
     res = scrape_urls(
         st.session_state.state,
         writer=None,
