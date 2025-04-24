@@ -1,6 +1,6 @@
 import pytest
 from streamlit.testing.v1 import AppTest
-from frontend.app import st
+from frontend.app_bak import st
 
 def test_app_initialization():
     """Test that the app initializes correctly"""
