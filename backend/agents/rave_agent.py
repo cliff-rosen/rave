@@ -268,6 +268,9 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         
         search = GoogleSearch(params)
         results = search.get_dict()
+        print("--------------------------------")
+        print(results)
+        print("--------------------------------")
         
         # Format results to match Tavily's format
         formatted_results = []
