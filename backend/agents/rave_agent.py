@@ -237,7 +237,7 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
         writer({"msg": f"Error performing search: {str(e)}"})
         return {}
 
-def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
+def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using SerpAPI instead of Tavily"""
 
     return {"search_results": [1,2,3]}  

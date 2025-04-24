@@ -48,8 +48,7 @@ def search2_wrapper():
     print("state", st.session_state.state)
     res = search2(
             st.session_state.state,
-            writer=None,
-            config={"configurable": {"max_search_results": 4}}
+            writer=None
         )
     st.session_state.state_container.write("search completed")
     st.session_state.state["search_results"] = res["search_results"]
