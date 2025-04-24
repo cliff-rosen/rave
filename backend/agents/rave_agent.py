@@ -240,6 +240,8 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
 def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using SerpAPI instead of Tavily"""
 
+    return {"search_results": [1,2,3]}  
+
     if writer:
         writer({"msg": "Performing search with SerpAPI..."})
     
@@ -286,7 +288,7 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         if not formatted_results:
             if writer:
                 writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
-            return {"search_results": [1,2,3]
+            return {"search_results": [1,2,3]}  
         
         if writer:
             writer({"msg": "Search completed successfully with SerpAPI"})
