@@ -240,7 +240,6 @@ def search(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
 def search2(state: State, writer: StreamWriter) -> AsyncIterator[Dict[str, Any]]:
     """Perform a search using SerpAPI instead of Tavily"""
 
-    return {"search_results": [1,2,3]}  
 
     if writer:
         writer({"msg": "Performing search with SerpAPI..."})
