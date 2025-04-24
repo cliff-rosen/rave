@@ -79,4 +79,5 @@ with right_col:
 
 st.markdown("---")
 st.write("DEBUG")
+st.write("v.0.1")
 
