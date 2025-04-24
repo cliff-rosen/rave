@@ -28,7 +28,7 @@ def search():
     st.session_state.scraped_content = ["-"]
 
     st.session_state.search_status_container.write("searching...")
-    st.session_state.state["current_query"] = st.session_state.state["current_query"]
+    st.session_state.state["current_query"] = st.session_state.query
     print("state", st.session_state.state)
     res = search2(
             st.session_state.state,
@@ -67,15 +67,30 @@ def prev_url():
     st.session_state.cur_idx -= 1
 
 with left_col:
-    st.button("search2", on_click=search)
+    st.text_input("question", on_change=search, key="query")
+    st.button("get best urls", on_click=get_best_urls)
+    st.button("scrape urls", on_click=scrape_urls_from_best_urls)  
     st.write("STATUS")
     st.session_state.search_status_container = st.empty()
+    prev_col, next_col = st.columns([1,1])    
+    with prev_col:
+        st.button("prev", on_click=prev_url)
+    with next_col:
+        st.button("next", on_click=next_url)
 
 
 with right_col:
     st.write("state")
     st.session_state.state_container = st.empty()
     st.session_state.state_container.write(st.session_state.state)
+
+    st.session_state.scraped_content_container = st.empty()
+    container = st.container()
+    if st.session_state.state["scraped_content"]:
+        with container:
+            st.write(f"idx: {st.session_state.cur_idx}")
+            st.write(f"url: {st.session_state.state['urls_to_scrape'][st.session_state.cur_idx]}")
+            st.markdown(st.session_state.state["scraped_content"][st.session_state.cur_idx])
 
 st.markdown("---")
 st.write("DEBUG")
