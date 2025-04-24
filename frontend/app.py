@@ -16,7 +16,7 @@ import copy
 from backend.config.settings import MAX_ITERATIONS, OPENAI_API_KEY, TAVILY_API_KEY
 import pandas as pd
 
-VERSION = "0.1.4"
+VERSION = "0.1.5"
 
 
 # Session management functions
