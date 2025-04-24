@@ -286,7 +286,7 @@ def search2(state: State, writer: StreamWriter, config: Dict[str, Any]) -> Async
         if not formatted_results:
             if writer:
                 writer({"msg": "Warning: No search results found. The answer will be generated without external sources."})
-            return {"search_results": []}
+            return {"search_results": results}
         
         if writer:
             writer({"msg": "Search completed successfully with SerpAPI"})
