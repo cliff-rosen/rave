@@ -1,5 +1,11 @@
 import streamlit as st
 import time
+import sys
+import os
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from backend.agents.rave_agent import search, search2, get_best_urls_from_search, scrape_urls
 
 state = {
@@ -100,5 +106,5 @@ with right_col:
 
 st.markdown("---")
 st.write("DEBUG")
-st.write("v.0.1")
+st.write("v.0.2")
 
